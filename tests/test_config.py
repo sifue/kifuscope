@@ -9,6 +9,11 @@ def test_settings_environment_priority(monkeypatch) -> None:
     assert settings.engine_path == Path("/tmp/from-env")
 
 
+def test_threads_can_be_disabled() -> None:
+    settings = Settings(threads=0)
+    assert settings.threads == 0
+
+
 def test_cli_override_copy() -> None:
     settings = Settings(server_port=8765)
     overridden = settings.with_overrides(server_port=9000, server_host=None)

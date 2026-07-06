@@ -86,7 +86,8 @@ class YaneuraOuClient:
                 self._send("usi")
                 self._wait_for("usiok")
                 self._send(f"setoption name USI_Hash value {self.settings.hash_mb}")
-                self._send(f"setoption name Threads value {self.settings.threads}")
+                if self.settings.threads > 0:
+                    self._send(f"setoption name Threads value {self.settings.threads}")
                 self._send(f"setoption name MultiPV value {self.settings.multipv}")
                 self._send("isready")
                 self._wait_for("readyok")

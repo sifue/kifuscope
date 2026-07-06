@@ -1,0 +1,22 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.env
+.env.local
+.DS_Store
+Thumbs.db
+
+# 外部エンジン本体はコミットしない
+YaneuraOu*/
+*.exe
+*.dll
+*.bin
+*.onnx
+
+# 生成物
+dist/
+build/
+coverage/
+

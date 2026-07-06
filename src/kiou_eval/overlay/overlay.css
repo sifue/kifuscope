@@ -1,0 +1,26 @@
+:root {
+  color-scheme: dark;
+  font-family: "Yu Gothic UI", "Noto Sans JP", sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: transparent; color: #f7f5ef; }
+.panel {
+  width: 520px;
+  padding: 18px 22px 20px;
+  background: rgba(19, 21, 24, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+.players { display: flex; justify-content: space-between; margin-bottom: 7px; color: #b7bbc2; font-size: 14px; }
+.bar { position: relative; height: 32px; overflow: hidden; background: #292c32; border-radius: 6px; }
+.sente-bar { height: 100%; width: 50%; margin-left: auto; background: #e8e3d8; transition: width 450ms ease; }
+.bar-label { position: absolute; inset: 0; display: grid; place-items: center; color: #ffcc68; font-size: 14px; font-weight: 700; text-shadow: 0 1px 4px #000; }
+.details { margin-top: 15px; }
+.score { margin-bottom: 12px; font-size: 30px; font-weight: 750; letter-spacing: 0.02em; }
+.move-row { display: flex; justify-content: space-between; font-size: 20px; }
+.move-row span, .meta { color: #b7bbc2; }
+.meta { display: flex; justify-content: space-between; margin-top: 13px; font-size: 14px; }
+.error .score, .error #status { color: #ff8d84; }
+

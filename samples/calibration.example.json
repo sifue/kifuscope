@@ -1,0 +1,27 @@
+{
+  "board": {"x": 420, "y": 120, "width": 900, "height": 900},
+  "hand_slots": [
+    {"side": "black", "piece": "R", "rect": {"x": 1360, "y": 700, "width": 40, "height": 32}},
+    {"side": "black", "piece": "B", "rect": {"x": 1405, "y": 700, "width": 40, "height": 32}},
+    {"side": "black", "piece": "G", "rect": {"x": 1450, "y": 700, "width": 40, "height": 32}},
+    {"side": "black", "piece": "S", "rect": {"x": 1495, "y": 700, "width": 40, "height": 32}},
+    {"side": "black", "piece": "N", "rect": {"x": 1540, "y": 700, "width": 40, "height": 32}},
+    {"side": "black", "piece": "L", "rect": {"x": 1585, "y": 700, "width": 40, "height": 32}},
+    {"side": "black", "piece": "P", "rect": {"x": 1630, "y": 700, "width": 40, "height": 32}},
+    {"side": "white", "piece": "R", "rect": {"x": 50, "y": 280, "width": 40, "height": 32}},
+    {"side": "white", "piece": "B", "rect": {"x": 95, "y": 280, "width": 40, "height": 32}},
+    {"side": "white", "piece": "G", "rect": {"x": 140, "y": 280, "width": 40, "height": 32}},
+    {"side": "white", "piece": "S", "rect": {"x": 185, "y": 280, "width": 40, "height": 32}},
+    {"side": "white", "piece": "N", "rect": {"x": 230, "y": 280, "width": 40, "height": 32}},
+    {"side": "white", "piece": "L", "rect": {"x": 275, "y": 280, "width": 40, "height": 32}},
+    {"side": "white", "piece": "P", "rect": {"x": 320, "y": 280, "width": 40, "height": 32}}
+  ],
+  "turn": {"x": 1350, "y": 950, "width": 180, "height": 48},
+  "rotate_board_180": false,
+  "board_threshold": 0.78,
+  "hand_threshold": 0.78,
+  "turn_threshold": 0.78,
+  "stable_frames": 3,
+  "legal_match_threshold": 0.9,
+  "legal_margin": 0.02
+}

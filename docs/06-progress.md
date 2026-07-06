@@ -105,6 +105,134 @@ uv run python -m kiou_eval demo-overlay
 
 棋桜の初期局面、先後の手番、持ち駒、成駒を含むスクリーンショットでテンプレートを構築し、誤認識率と合法手追跡成功率を測定する。
 
+## 2026-07-07 棋桜サンプルスクリーンショット確認・OBS連携方針
+
+### 実装した内容
+
+- `docs/sample-screenshot/sample01.png` / `sample02.png` の表示レイアウトを確認
+- 2064×1112の棋桜ウィンドウ向け盤面キャリブレーション雛形を追加
+- Windowsのウィンドウタイトル `KIOU` から1フレーム保存する `capture-window` CLIを追加
+- OBSは画面入力元ではなく、棋桜映像とKifuscopeオーバーレイの合成先として扱う方針をREADMEと設計文書へ追記
+
+### 変更したファイル
+
+- `src/kiou_eval/recognizer/capture.py`
+- `src/kiou_eval/recognizer/__init__.py`
+- `src/kiou_eval/__main__.py`
+- `samples/calibration.kiou-2064x1112.example.json`
+- `README.md`
+- `docs/04-screen-recognition.md`
+- `docs/05-obs-overlay.md`
+- `docs/06-progress.md`
+
+### 動作確認方法
+
+```bash
+uv run python -m kiou_eval capture-window --title KIOU --output captures/kiou.png
+uv run pytest
+uv run ruff check .
+```
+
+### 未解決の問題
+
+- `capture-window` はWindows専用のため、このLinux環境では実ウィンドウ取得を未確認
+- サンプル2枚は正解SFENが未確定のため、テンプレート生成には未使用
+- 持ち駒欄と手番欄のキャリブレーションは追加調整が必要
+
 ### 次にやること
 
 Windows実機でMVP 1・2を統合試験し、その後に棋桜スクリーンショットを用いたMVP 3のクロップ・テンプレート設計へ進む。
+
+## 2026-07-07 盤面主入力・合法手追跡による手番/持ち駒補正
+
+### 実装した内容
+
+- 持ち駒欄・手番欄が未設定でも、盤面81マスが確定した場合は `board_observed` として扱うよう変更
+- `recognize-image` の `board_observed` を正常終了扱いに変更
+- `StableLegalTracker` が盤面だけの観測から合法手後局面を確定できることを単体テストで確認
+- `sample06.png` から生成した初期局面テンプレートで、初期局面と矢印付き初期局面の盤面追跡を確認
+
+### 変更したファイル
+
+- `src/kiou_eval/shogi/board_state.py`
+- `src/kiou_eval/recognizer/board_recognizer.py`
+- `src/kiou_eval/__main__.py`
+- `tests/test_recognizer.py`
+- `tests/test_legal_tracker.py`
+- `README.md`
+- `docs/04-screen-recognition.md`
+- `docs/06-progress.md`
+
+### 動作確認
+
+```bash
+uv run python -m kiou_eval recognize-image docs/sample-screenshot/sample06.png \
+  --calibration samples/calibration.kiou-2064x1112.example.json \
+  --templates templates/kiou-initial
+
+uv run python -m kiou_eval track-images \
+  docs/sample-screenshot/sample06.png docs/sample-screenshot/sample04.png \
+  --calibration samples/calibration.kiou-2064x1112.example.json \
+  --templates templates/kiou-initial
+```
+
+### テスト結果
+
+- `uv run pytest -q`: 33件成功
+- `uv run ruff check .`: 成功
+
+### 未解決の問題
+
+- 連続対局フレームから1手ずつ追跡する実運用テストが必要
+- 成駒を含む局面は、成駒テンプレートを正解SFEN付き画像から追加する必要がある
+- 持ち駒欄を画像認識する場合は別途キャリブレーションが必要だが、初期運用では合法手追跡で補正する
+
+## 2026-07-07 MVP 5リアルタイム運用基礎
+
+### 実装した内容
+
+- `RealtimeEvaluator` を追加し、キャプチャ、盤面認識、合法手追跡、評価配信を1つの非同期ループに統合
+- キャプチャ元として `window`、`monitor`、`images` を選択可能にした
+- Windows実運用向けに `KIOU` ウィンドウを直接キャプチャする `serve-realtime` CLIを追加
+- Linux検証向けに画像列を使ったリアルタイムループを追加
+- 確定した新しいSFENだけ評価要求を出し、評価中に新局面が来た場合はYaneuraOuへ `stop` を送る構成にした
+- 認識失敗、局面未確定、評価中、評価完了を `EvaluationHub` 経由でOBSオーバーレイへ配信するようにした
+
+### 変更したファイル
+
+- `src/kiou_eval/runtime/__init__.py`
+- `src/kiou_eval/runtime/realtime.py`
+- `src/kiou_eval/server/app.py`
+- `src/kiou_eval/__main__.py`
+- `README.md`
+- `docs/02-architecture.md`
+- `docs/05-obs-overlay.md`
+- `docs/06-progress.md`
+
+### 動作確認
+
+画像列入力・評価なしでサーバー起動し、`/api/eval` が初期局面を返すことを確認。
+
+```bash
+uv run python -m kiou_eval serve-realtime \
+  --source images \
+  --images docs/sample-screenshot/sample06.png docs/sample-screenshot/sample04.png \
+  --calibration samples/calibration.kiou-2064x1112.example.json \
+  --templates templates/kiou-initial \
+  --no-evaluate
+```
+
+画像列入力・YaneuraOu評価込みで、初期局面の評価値、最善手、PVを `/api/eval` から取得できることを確認。
+
+### テスト結果
+
+- `uv run pytest -q`: 33件成功
+- `uv run ruff check .`: 成功
+- Linux NNUE版YaneuraOuでリアルタイム経路から評価成功
+
+### 未解決の問題
+
+- Windows実機で `serve-realtime --source window --window-title KIOU` の統合試験が必要
+- 実対局の連続フレームで、1手ずつ追跡できるかの評価が必要
+- 成駒・持ち駒が出る局面では追加テンプレートが必要
+- 手動補正UIは未実装

@@ -1,0 +1,17 @@
+{
+  "board": {
+    "x": 558,
+    "y": 105,
+    "width": 928,
+    "height": 928
+  },
+  "hand_slots": [],
+  "turn": null,
+  "rotate_board_180": false,
+  "board_threshold": 0.78,
+  "hand_threshold": 0.78,
+  "turn_threshold": 0.78,
+  "stable_frames": 3,
+  "legal_match_threshold": 0.9,
+  "legal_margin": 0.02
+}

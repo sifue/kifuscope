@@ -8,6 +8,7 @@ import logging
 import sys
 from pathlib import Path
 
+import cv2
 import uvicorn
 
 from kiou_eval.config import Settings
@@ -17,8 +18,10 @@ from kiou_eval.recognizer import (
     ScreenRecognizer,
     TemplateLibrary,
     build_templates,
+    capture_window,
     load_image,
 )
+from kiou_eval.runtime import RealtimeConfig
 from kiou_eval.server import create_app
 from kiou_eval.shogi import INITIAL_SFEN, BoardState, SfenError, StableLegalTracker
 
@@ -41,6 +44,40 @@ def _parser() -> argparse.ArgumentParser:
     serve.add_argument("--host", dest="server_host")
     serve.add_argument("--port", type=int, dest="server_port")
 
+    realtime = subparsers.add_parser(
+        "serve-realtime", help="棋桜画面を認識しながらローカルサーバーを起動する"
+    )
+    realtime.add_argument("--host", dest="server_host")
+    realtime.add_argument("--port", type=int, dest="server_port")
+    realtime.add_argument("--calibration", type=Path, required=True, help="領域設定JSON")
+    realtime.add_argument("--templates", type=Path, required=True, help="テンプレートディレクトリ")
+    realtime.add_argument("--initial-sfen", default=INITIAL_SFEN, help="追跡開始局面")
+    realtime.add_argument(
+        "--source",
+        choices=["window", "monitor", "images"],
+        default="window",
+        help="キャプチャ元",
+    )
+    realtime.add_argument("--window-title", default="KIOU", help="対象ウィンドウタイトル")
+    realtime.add_argument(
+        "--window-contains",
+        action="store_true",
+        help="ウィンドウタイトルを完全一致ではなく部分一致で検索する",
+    )
+    realtime.add_argument("--monitor", type=int, default=1, help="mssのモニター番号")
+    realtime.add_argument("--images", type=Path, nargs="*", help="検証用の時系列画像")
+    realtime.add_argument(
+        "--interval",
+        type=float,
+        default=0.25,
+        help="キャプチャ間隔（秒）",
+    )
+    realtime.add_argument(
+        "--no-evaluate",
+        action="store_true",
+        help="局面追跡のみ行い、YaneuraOu評価は行わない",
+    )
+
     demo = subparsers.add_parser("demo-overlay", help="デモ評価値を表示するサーバーを起動する")
     demo.add_argument("--host", dest="server_host")
     demo.add_argument("--port", type=int, dest="server_port")
@@ -50,6 +87,15 @@ def _parser() -> argparse.ArgumentParser:
     recognize.add_argument("--calibration", type=Path, required=True, help="領域設定JSON")
     recognize.add_argument("--templates", type=Path, required=True, help="テンプレートディレクトリ")
     recognize.add_argument("--move-number", type=int, default=1, help="SFENへ設定する手数")
+
+    capture = subparsers.add_parser(
+        "capture-window", help="Windowsのウィンドウタイトルから1フレーム保存する"
+    )
+    capture.add_argument("--title", default="KIOU", help="対象ウィンドウタイトル")
+    capture.add_argument(
+        "--contains", action="store_true", help="タイトルを完全一致ではなく部分一致で検索する"
+    )
+    capture.add_argument("--output", type=Path, required=True, help="保存先PNG")
 
     track = subparsers.add_parser("track-images", help="連続画像を合法手で追跡する")
     track.add_argument("images", type=Path, nargs="+", help="時系列順のスクリーンショット")
@@ -105,12 +151,43 @@ def main(argv: list[str] | None = None) -> int:
                 log_level=args.log_level.lower(),
             )
             return 0
+        if args.command == "serve-realtime":
+            realtime_config = RealtimeConfig(
+                calibration_path=args.calibration,
+                templates_path=args.templates,
+                initial_sfen=args.initial_sfen,
+                source=args.source,
+                window_title=args.window_title,
+                window_contains=args.window_contains,
+                monitor=args.monitor,
+                images=tuple(args.images or ()),
+                interval_sec=args.interval,
+                evaluate=not args.no_evaluate,
+            )
+            uvicorn.run(
+                create_app(settings, realtime=realtime_config),
+                host=settings.server_host,
+                port=settings.server_port,
+                log_level=args.log_level.lower(),
+            )
+            return 0
         if args.command == "recognize-image":
             calibration = Calibration.from_file(args.calibration)
             recognizer = ScreenRecognizer(calibration, TemplateLibrary(args.templates))
             result = recognizer.recognize(load_image(args.image), move_number=args.move_number)
             print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
-            return 0 if result.status == "ok" else 2
+            return 0 if result.status in {"ok", "board_observed"} else 2
+        if args.command == "capture-window":
+            result = capture_window(args.title, exact=not args.contains)
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            if not cv2.imwrite(str(args.output), result.image):
+                raise ValueError(f"画像を書き込めません: {args.output}")
+            print(
+                "ウィンドウをキャプチャしました: "
+                f"title={result.title}, rect={result.left},{result.top},"
+                f"{result.width}x{result.height}, output={args.output}"
+            )
+            return 0
         if args.command == "track-images":
             calibration = Calibration.from_file(args.calibration)
             recognizer = ScreenRecognizer(calibration, TemplateLibrary(args.templates))

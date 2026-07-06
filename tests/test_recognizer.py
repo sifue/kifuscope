@@ -71,7 +71,7 @@ def test_missing_hand_templates_stops_position(tmp_path: Path) -> None:
     recognizer, image = _synthetic_recognizer(tmp_path)
     no_hands = Calibration(board=Rect(0, 0, 90, 90), turn=Rect(100, 0, 10, 10))
     result = ScreenRecognizer(no_hands, recognizer.templates).recognize(image)
-    assert result.status == "recognition_failed"
+    assert result.status == "board_observed"
     assert result.observation.hands is None
 
 

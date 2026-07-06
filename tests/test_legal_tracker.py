@@ -13,6 +13,10 @@ def _observation(state: BoardState) -> BoardObservation:
     return BoardObservation(state.squares, (1.0,) * 81, state.hands, state.turn, 1.0)
 
 
+def _board_only_observation(state: BoardState) -> BoardObservation:
+    return BoardObservation(state.squares, (1.0,) * 81, None, None, 1.0)
+
+
 def _after_move(usi: str) -> BoardState:
     board = cshogi.Board(INITIAL_SFEN)
     board.push_usi(usi)
@@ -29,6 +33,15 @@ def test_legal_move_requires_stable_frames() -> None:
     assert second.status == "ok"
     assert second.move_usi == "7g7f"
     assert tracker.current.turn == "w"
+
+
+def test_legal_move_can_be_tracked_from_board_only_observation() -> None:
+    tracker = StableLegalTracker(BoardState.from_sfen(INITIAL_SFEN), stable_frames=1)
+    result = tracker.update(_board_only_observation(_after_move("7g7f")))
+    assert result.status == "ok"
+    assert result.move_usi == "7g7f"
+    assert result.state.turn == "w"
+    assert result.state.hands == {}
 
 
 def test_unchanged_position_is_kept() -> None:

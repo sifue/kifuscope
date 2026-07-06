@@ -2,7 +2,7 @@
 
 from .board_recognizer import RecognitionResult, ScreenRecognizer
 from .calibration import Calibration, HandSlot, Rect
-from .capture import load_image
+from .capture import WindowCaptureResult, capture_screen, capture_window, load_image
 from .template_builder import build_templates
 from .templates import TemplateLibrary
 
@@ -13,6 +13,9 @@ __all__ = [
     "Rect",
     "ScreenRecognizer",
     "TemplateLibrary",
+    "WindowCaptureResult",
     "build_templates",
+    "capture_screen",
+    "capture_window",
     "load_image",
 ]

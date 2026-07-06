@@ -82,9 +82,60 @@ uv run python -m kiou_eval demo-overlay
 
 OBSの「ブラウザ」ソースへ `http://127.0.0.1:8765/overlay` を登録し、幅520、高さ220程度を指定します。対局者用画面にはこのソースを配置しないでください。
 
+リアルタイム認識・評価込みで起動する場合:
+
+```bash
+uv run python -m kiou_eval serve-realtime \
+  --calibration samples/calibration.kiou-2064x1112.example.json \
+  --templates templates/kiou-initial \
+  --source window \
+  --window-title KIOU
+```
+
+Windows上では、表示中の `KIOU` ウィンドウを直接キャプチャします。OBSは同じ `KIOU` ウィンドウを「ウィンドウキャプチャ」で取り込み、Kifuscopeの `/overlay` を「ブラウザ」ソースで重ねます。
+
+Linuxや開発環境で画像列から同じループを確認する場合:
+
+```bash
+uv run python -m kiou_eval serve-realtime \
+  --source images \
+  --images docs/sample-screenshot/sample06.png docs/sample-screenshot/sample04.png \
+  --calibration samples/calibration.kiou-2064x1112.example.json \
+  --templates templates/kiou-initial \
+  --no-evaluate
+```
+
+`--no-evaluate` を外すと、確定局面だけをYaneuraOuへ送って評価値を配信します。新しい確定局面が来た場合は、古い探索へ停止要求を送ります。
+
+## OBSと棋桜画面の連携
+
+OBSからKifuscopeへ画面情報を渡す必要はありません。実運用では、OBSとKifuscopeを次のように分離します。
+
+1. OBSは棋桜の `KIOU` ウィンドウを「ウィンドウキャプチャ」で配信用映像として取り込む
+2. Kifuscopeは同じ `KIOU` ウィンドウをWindows APIで直接キャプチャして局面認識する
+3. OBSはKifuscopeの `http://127.0.0.1:8765/overlay` を「ブラウザ」ソースとして重ねる
+
+この構成にすると、OBSの内部映像をPythonへ戻すための仮想カメラ、NDI、プラグインが不要になります。
+
+Windowsで `KIOU` ウィンドウを1フレーム保存してキャリブレーション確認するには次を実行します。
+
+```bash
+uv run python -m kiou_eval capture-window --title KIOU --output captures/kiou.png
+```
+
+ウィンドウタイトルに追加文字が付く環境では部分一致で検索できます。
+
+```bash
+uv run python -m kiou_eval capture-window --title KIOU --contains --output captures/kiou.png
+```
+
+対象ウィンドウは最小化せず、画面上に表示した状態にしてください。
+
 ## 静止画像認識と合法手追跡
 
 最初に `samples/calibration.example.json` をコピーし、実際のスクリーンショットに合わせて盤面、持ち駒枚数、手番表示のピクセル矩形を設定します。サンプル座標は説明用で、そのまま棋桜へ適用できる値ではありません。
+
+今回の `docs/sample-screenshot/sample01.png` / `sample02.png` と同じ 2064×1112 レイアウト向けの盤面雛形は `samples/calibration.kiou-2064x1112.example.json` です。実際のWindows環境で取得した画像と1〜2px単位でずれる可能性があるため、最終的には `capture-window` で保存した画像に合わせて調整してください。
 
 既知局面の画像からテンプレートを生成します。同じ出力先へ異なる局面を追加すると、成駒や持ち駒枚数などのテンプレートを増やせます。
 
@@ -103,6 +154,8 @@ uv run python -m kiou_eval recognize-image samples/screenshots/position.png \
   --templates templates/kiou
 ```
 
+持ち駒欄・手番欄をキャリブレーションしていない場合でも、盤面81マスが読めた場合は `status: "board_observed"` を返します。この状態は失敗ではなく、初期局面からの合法手追跡で手番・持ち駒を補正するための入力として使います。
+
 時系列画像を合法手で追跡します。既定では同じ候補が3フレーム連続した場合だけ確定します。`--evaluate` を付けると、確定局面だけをYaneuraOuへ送ります。
 
 ```bash
@@ -113,6 +166,15 @@ uv run python -m kiou_eval track-images frame01.png frame02.png frame03.png \
 ```
 
 盤面が後手側から180度回転して表示される場合は `rotate_board_180` を `true` にします。認識失敗・合法手不一致・安定待ちのフレームは評価されません。
+
+`sample06.png` のような選択枠・矢印なしの初期局面からは、次のように初期テンプレートを作成できます。
+
+```bash
+uv run python -m kiou_eval build-templates docs/sample-screenshot/sample06.png \
+  --sfen "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1" \
+  --calibration samples/calibration.kiou-2064x1112.example.json \
+  --output templates/kiou-initial
+```
 
 ## 開発
 

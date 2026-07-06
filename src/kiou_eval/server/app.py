@@ -8,6 +8,7 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, RedirectResponse
@@ -19,6 +20,9 @@ from kiou_eval.shogi import INITIAL_SFEN, PositionValidationError, SfenError
 
 from .schemas import AnalyzeRequest, OverlayState
 from .websocket import EvaluationHub
+
+if TYPE_CHECKING:
+    from kiou_eval.runtime import RealtimeConfig
 
 logger = logging.getLogger(__name__)
 OVERLAY_DIR = Path(__file__).resolve().parent.parent / "overlay"
@@ -50,7 +54,12 @@ async def _run_demo(hub: EvaluationHub) -> None:
         await asyncio.sleep(3)
 
 
-def create_app(settings: Settings | None = None, *, demo: bool = False) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    *,
+    demo: bool = False,
+    realtime: RealtimeConfig | None = None,
+) -> FastAPI:
     """依存を注入可能なFastAPIアプリを生成する。"""
     resolved = settings or Settings()
     hub = EvaluationHub()
@@ -59,9 +68,20 @@ def create_app(settings: Settings | None = None, *, demo: bool = False) -> FastA
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         demo_task = asyncio.create_task(_run_demo(hub)) if demo else None
+        realtime_task = None
+        if realtime is not None:
+            from kiou_eval.runtime import RealtimeEvaluator
+
+            realtime_task = asyncio.create_task(
+                RealtimeEvaluator(resolved, hub, engine, realtime).run()
+            )
         try:
             yield
         finally:
+            if realtime_task is not None:
+                realtime_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await realtime_task
             if demo_task is not None:
                 demo_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
@@ -71,7 +91,7 @@ def create_app(settings: Settings | None = None, *, demo: bool = False) -> FastA
     app = FastAPI(
         title="Kifuscope API",
         description="配信・実況向けの将棋評価値API",
-        version="0.2.0",
+        version="0.3.0",
         lifespan=lifespan,
     )
     app.state.settings = resolved

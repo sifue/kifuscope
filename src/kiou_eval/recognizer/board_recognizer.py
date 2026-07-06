@@ -56,6 +56,12 @@ class ScreenRecognizer:
         )
         state = observation.to_state(move_number)
         if state is None:
+            if observation.has_complete_board():
+                return RecognitionResult(
+                    "board_observed",
+                    "盤面は認識しました。手番・持ち駒は合法手追跡で補正します",
+                    observation,
+                )
             return RecognitionResult(
                 "recognition_failed", "局面の一部を確定できませんでした", observation
             )

@@ -190,6 +190,10 @@ class BoardObservation:
             return None
         return BoardState(self.squares, self.hands, self.turn, move_number)  # type: ignore[arg-type]
 
+    def has_complete_board(self) -> bool:
+        """盤面81マスだけが全て確定しているかを返す。"""
+        return not any(square is UNKNOWN for square in self.squares)
+
 
 class _UnknownSquare:
     def __repr__(self) -> str:

@@ -75,3 +75,5 @@ uv run python -m kiou_eval capture-window --title KIOU --output captures/kiou.pn
 ```
 
 これはOBSから映像を受け取るのではなく、Kifuscopeが同じウィンドウを直接キャプチャする方式である。ウィンドウが最小化されている場合は取得対象から除外する。タイトルが完全一致しない環境では `--contains` を付ける。
+
+`capture-window` と `serve-realtime --source window` はWindows APIを使うため、KifuscopeをWindows側で起動する必要がある。WSL Ubuntu上のPythonプロセスからは、通常のWindowsアプリである棋桜のウィンドウを直接取得しない。WSLでは `--source images` による画像列検証、またはLinux版YaneuraOuの統合確認を行う。

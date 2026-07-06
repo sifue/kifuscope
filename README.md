@@ -94,6 +94,8 @@ uv run python -m kiou_eval serve-realtime \
 
 Windows上では、表示中の `KIOU` ウィンドウを直接キャプチャします。OBSは同じ `KIOU` ウィンドウを「ウィンドウキャプチャ」で取り込み、Kifuscopeの `/overlay` を「ブラウザ」ソースで重ねます。
 
+重要: `--source window --window-title KIOU` はWindows APIでウィンドウを取得するため、KifuscopeもWindows側で起動する必要があります。WSL Ubuntu上で実行したKifuscopeからは、通常のWindowsアプリである棋桜のウィンドウを直接取得できません。
+
 Windowsでの最小起動手順は次の通りです。
 
 1. 棋桜を起動し、ウィンドウタイトルが `KIOU` になっていることを確認する
@@ -117,6 +119,8 @@ uv run python -m kiou_eval serve-realtime --calibration samples/calibration.kiou
 起動後、ブラウザで `http://127.0.0.1:8765/overlay` を開いて表示確認します。OBSには同じURLを Browser Source として登録します。
 
 最善手はUSI表記に加えて、`▲7六歩` のような配信用日本語表記 `bestmove_japanese` も返します。オーバーレイでは日本語表記を優先表示します。
+
+WSL Ubuntuは、開発、単体テスト、Linux版YaneuraOu検証、画像列入力による認識ループ確認に使います。WSLでリアルタイム確認する場合は `--source images` を使ってください。WSLからWindows画面を取得するにはOBS仮想カメラやNDIなど別経路が必要になり、現時点の推奨構成ではありません。
 
 Linuxや開発環境で画像列から同じループを確認する場合:
 

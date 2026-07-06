@@ -31,6 +31,8 @@ uv run python -m kiou_eval serve-realtime \
 
 起動後、OBS Browser Sourceは通常通り `http://127.0.0.1:8765/overlay` を参照する。Kifuscope側は `KIOU` ウィンドウを直接キャプチャし、局面未確定・認識失敗・評価中・評価完了の状態をWebSocketで配信する。
 
+この `--source window` 構成では、棋桜、Kifuscope、OBSをすべてWindows側で起動する。WSL Ubuntu上でKifuscopeを起動しても、Windows側の `KIOU` ウィンドウは直接取得できない。WSLは開発・テスト・画像列検証用とし、本番配信ではWindows側のPython環境から起動する。
+
 ## 更新仕様
 
 `GET /api/eval` は最新状態をJSONで返す。`POST /api/analyze` は `sfen` と任意の `movetime_ms` を受け取り、探索結果を最新状態にする。`/ws/eval` は接続時と状態変更時に同じJSONを配信する。ブラウザ側は切断時に自動再接続する。

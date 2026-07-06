@@ -236,3 +236,31 @@ uv run python -m kiou_eval serve-realtime \
 - 実対局の連続フレームで、1手ずつ追跡できるかの評価が必要
 - 成駒・持ち駒が出る局面では追加テンプレートが必要
 - 手動補正UIは未実装
+
+## 2026-07-07 Windows起動要件と最善手日本語表記
+
+### 実装・文書化した内容
+
+- `bestmove_japanese` と `pv_japanese` を評価JSONへ追加
+- オーバーレイで `bestmove_japanese` を優先表示するよう変更
+- `▲7六歩`、`△3四歩`、`▲5五角打`、`▲2二角成` のような日本語指し手表記を追加
+- `--source window --window-title KIOU` はWindows APIを使うため、KifuscopeをWindows側で起動する必要があることをREADMEと設計文書へ明記
+- WSL Ubuntuは開発・テスト・画像列検証用であり、WindowsアプリのKIOUウィンドウ直接取得には使わない方針を明記
+
+### 変更したファイル
+
+- `src/kiou_eval/shogi/move_notation.py`
+- `src/kiou_eval/engine/eval_result.py`
+- `src/kiou_eval/engine/yaneuraou_client.py`
+- `src/kiou_eval/server/schemas.py`
+- `src/kiou_eval/overlay/overlay.js`
+- `tests/test_move_notation.py`
+- `README.md`
+- `docs/04-screen-recognition.md`
+- `docs/05-obs-overlay.md`
+- `docs/06-progress.md`
+
+### テスト結果
+
+- `uv run pytest -q`: 38件成功
+- `uv run ruff check .`: 成功

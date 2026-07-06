@@ -10,16 +10,35 @@ from kiou_eval.engine import EngineError, YaneuraOuClient
 from kiou_eval.shogi import INITIAL_SFEN
 
 
-def _fake_engine(tmp_path: Path) -> Path:
+def _fake_engine(
+    tmp_path: Path,
+    *,
+    options: bool = False,
+    record_commands: Path | None = None,
+) -> Path:
     path = tmp_path / "fake_engine.py"
+    record_line = (
+        f"open({str(record_commands)!r}, 'a', encoding='utf-8').write(command + '\\n')"
+        if record_commands is not None
+        else ""
+    )
+    option_lines = (
+        """        print("option name USI_Hash type spin default 16 min 1 max 1048576", flush=True)
+        print("option name MultiPV type spin default 1 min 1 max 10", flush=True)
+        print("option name TensorRT_Batch_Size type spin default 1 min 1 max 1024", flush=True)
+"""
+        if options
+        else ""
+    )
     path.write_text(
-        """#!/usr/bin/env python3
+        f"""#!/usr/bin/env python3
 import sys
 for raw in sys.stdin:
     command = raw.strip()
+    {record_line}
     if command == "usi":
         print("id name FakeEngine", flush=True)
-        print("usiok", flush=True)
+{option_lines}        print("usiok", flush=True)
     elif command == "isready":
         print("readyok", flush=True)
     elif command.startswith("go "):
@@ -68,3 +87,20 @@ def test_white_turn_score_is_normalized(tmp_path: Path) -> None:
     with YaneuraOuClient(settings, command_timeout=2) as client:
         result = client.analyze(sfen)
     assert result.eval_cp_sente == -235
+
+
+def test_only_supported_usi_options_are_sent(tmp_path: Path) -> None:
+    commands = tmp_path / "commands.txt"
+    settings = Settings(
+        engine_path=_fake_engine(tmp_path, options=True, record_commands=commands),
+        threads=4,
+        extra_options="TensorRT_Batch_Size=8;UnknownOption=1",
+    )
+    with YaneuraOuClient(settings, command_timeout=2) as client:
+        client.check_connection()
+    sent = commands.read_text(encoding="utf-8")
+    assert "setoption name USI_Hash value 1024" in sent
+    assert "setoption name MultiPV value 3" in sent
+    assert "setoption name TensorRT_Batch_Size value 8" in sent
+    assert "setoption name Threads value 4" not in sent
+    assert "UnknownOption" not in sent

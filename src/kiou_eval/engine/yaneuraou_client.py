@@ -36,6 +36,7 @@ class YaneuraOuClient:
         self._recent_output: deque[str] = deque(maxlen=5)
         self._reader_thread: threading.Thread | None = None
         self._lock = threading.Lock()
+        self._supported_options: set[str] = set()
 
     @property
     def running(self) -> bool:
@@ -84,11 +85,13 @@ class YaneuraOuClient:
             self._reader_thread.start()
             try:
                 self._send("usi")
-                self._wait_for("usiok")
-                self._send(f"setoption name USI_Hash value {self.settings.hash_mb}")
+                self._supported_options = self._wait_for_usiok()
+                self._set_option_if_supported("USI_Hash", str(self.settings.hash_mb))
                 if self.settings.threads > 0:
-                    self._send(f"setoption name Threads value {self.settings.threads}")
-                self._send(f"setoption name MultiPV value {self.settings.multipv}")
+                    self._set_option_if_supported("Threads", str(self.settings.threads))
+                self._set_option_if_supported("MultiPV", str(self.settings.multipv))
+                for name, value in _parse_extra_options(self.settings.extra_options):
+                    self._set_option_if_supported(name, value)
                 self._send("isready")
                 self._wait_for("readyok")
                 self._send("usinewgame")
@@ -139,6 +142,24 @@ class YaneuraOuClient:
         deadline = time.monotonic() + self.command_timeout
         while self._next_line(deadline) != expected:
             pass
+
+    def _wait_for_usiok(self) -> set[str]:
+        """usiokまでに宣言されたUSIオプション名を集める。"""
+        deadline = time.monotonic() + self.command_timeout
+        options: set[str] = set()
+        while True:
+            line = self._next_line(deadline)
+            if line == "usiok":
+                return options
+            option_name = _parse_option_name(line)
+            if option_name is not None:
+                options.add(option_name)
+
+    def _set_option_if_supported(self, name: str, value: str) -> None:
+        if name not in self._supported_options:
+            logger.info("USIオプションをスキップします（未対応）: %s", name)
+            return
+        self._send(f"setoption name {name} value {value}")
 
     def check_connection(self) -> None:
         """起動済みエンジンへisreadyを送り、応答を確認する。"""
@@ -247,3 +268,25 @@ class YaneuraOuClient:
 
     def __exit__(self, *_args: object) -> None:
         self.close()
+
+
+def _parse_option_name(line: str) -> str | None:
+    """USIのoption行からoption名だけを取り出す。"""
+    prefix = "option name "
+    marker = " type "
+    if not line.startswith(prefix) or marker not in line:
+        return None
+    return line[len(prefix) : line.index(marker)].strip()
+
+
+def _parse_extra_options(text: str) -> list[tuple[str, str]]:
+    """'Name=Value;Name2=Value2' 形式の追加USIオプションを読む。"""
+    options: list[tuple[str, str]] = []
+    for item in text.split(";"):
+        if not item.strip():
+            continue
+        if "=" not in item:
+            raise ValueError("YANEAURAOU_EXTRA_OPTIONSは Name=Value を;区切りで指定してください")
+        name, value = item.split("=", 1)
+        options.append((name.strip(), value.strip()))
+    return options

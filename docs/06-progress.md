@@ -264,3 +264,25 @@ uv run python -m kiou_eval serve-realtime \
 
 - `uv run pytest -q`: 38件成功
 - `uv run ruff check .`: 成功
+
+## 2026-07-07 ふかうら王TensorRT対応
+
+### 実装・文書化した内容
+
+- `usi` 応答中の `option name ...` を収集し、エンジンが宣言したUSIオプションだけ `setoption` するよう変更
+- `Threads`、`USI_Hash`、`MultiPV` が未対応のエンジンでは自動スキップするよう変更
+- `YANEAURAOU_EXTRA_OPTIONS` を追加し、TensorRT版などのエンジン固有USIオプションを `Name=Value;Name2=Value2` 形式で指定可能にした
+- Windows版ふかうら王TensorRTの設定例と、公式Wiki/Releaseへの参考リンクをREADMEとUSI文書へ追加
+
+### 変更したファイル
+
+- `src/kiou_eval/config.py`
+- `src/kiou_eval/engine/yaneuraou_client.py`
+- `tests/test_yaneuraou_client.py`
+- `README.md`
+- `docs/03-usi-yaneuraou.md`
+- `docs/06-progress.md`
+
+### テスト結果
+
+- `uv run pytest -q tests/test_yaneuraou_client.py`: 5件成功

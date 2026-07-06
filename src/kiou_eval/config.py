@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     threads: int = Field(4, ge=0, validation_alias="YANEAURAOU_THREADS")
     multipv: int = Field(3, ge=1, validation_alias="YANEAURAOU_MULTIPV")
     movetime_ms: int = Field(500, ge=1, validation_alias="YANEAURAOU_MOVETIME_MS")
+    extra_options: str = Field("", validation_alias="YANEAURAOU_EXTRA_OPTIONS")
     server_host: str = Field("127.0.0.1", validation_alias="SERVER_HOST")
     server_port: int = Field(8765, ge=1, le=65535, validation_alias="SERVER_PORT")
 

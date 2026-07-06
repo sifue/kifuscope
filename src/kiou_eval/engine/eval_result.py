@@ -39,10 +39,11 @@ class EvalResult:
     nps: int | None
     multipv: int
     lines: list[PrincipalVariation]
+    bestmove_japanese: str | None = None
+    pv_japanese: list[str] = field(default_factory=list)
     confidence: float = 1.0
     message: str = "評価完了"
 
     def to_dict(self) -> dict[str, object]:
         """JSON化可能な辞書へ変換する。"""
         return asdict(self)
-

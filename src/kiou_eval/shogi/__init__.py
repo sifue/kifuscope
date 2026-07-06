@@ -8,6 +8,7 @@ from .board_state import (
     validate_sfen_position,
 )
 from .legal_tracker import CandidateMatch, LegalMoveMatcher, StableLegalTracker, TrackingResult
+from .move_notation import format_usi_move, format_usi_pv
 from .sfen import INITIAL_SFEN, SfenError, parse_sfen
 
 __all__ = [
@@ -21,6 +22,8 @@ __all__ = [
     "SfenError",
     "StableLegalTracker",
     "TrackingResult",
+    "format_usi_move",
+    "format_usi_pv",
     "parse_sfen",
     "validate_sfen_position",
 ]

@@ -94,6 +94,30 @@ uv run python -m kiou_eval serve-realtime \
 
 Windows上では、表示中の `KIOU` ウィンドウを直接キャプチャします。OBSは同じ `KIOU` ウィンドウを「ウィンドウキャプチャ」で取り込み、Kifuscopeの `/overlay` を「ブラウザ」ソースで重ねます。
 
+Windowsでの最小起動手順は次の通りです。
+
+1. 棋桜を起動し、ウィンドウタイトルが `KIOU` になっていることを確認する
+2. KIOUウィンドウを最小化せず、画面上に表示しておく
+3. Kifuscopeを起動する
+
+```powershell
+uv run python -m kiou_eval serve-realtime `
+  --calibration samples/calibration.kiou-2064x1112.example.json `
+  --templates templates/kiou-initial `
+  --source window `
+  --window-title KIOU
+```
+
+PowerShellではなくコマンドプロンプトを使う場合は、1行で実行します。
+
+```cmd
+uv run python -m kiou_eval serve-realtime --calibration samples/calibration.kiou-2064x1112.example.json --templates templates/kiou-initial --source window --window-title KIOU
+```
+
+起動後、ブラウザで `http://127.0.0.1:8765/overlay` を開いて表示確認します。OBSには同じURLを Browser Source として登録します。
+
+最善手はUSI表記に加えて、`▲7六歩` のような配信用日本語表記 `bestmove_japanese` も返します。オーバーレイでは日本語表記を優先表示します。
+
 Linuxや開発環境で画像列から同じループを確認する場合:
 
 ```bash

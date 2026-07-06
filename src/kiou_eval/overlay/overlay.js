@@ -22,7 +22,7 @@ function update(data) {
   const ok = data.status === "ok";
   panel.classList.toggle("error", !ok && !["waiting", "evaluating"].includes(data.status));
   score.textContent = formatScore(data);
-  bestmove.textContent = data.bestmove || "—";
+  bestmove.textContent = data.bestmove_japanese || data.bestmove || "—";
   depth.textContent = `深さ ${data.depth ?? "—"}`;
   status.textContent = data.message || data.status;
   const cp = data.eval_cp_sente ?? 0;

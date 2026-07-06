@@ -26,11 +26,12 @@ class OverlayState(BaseModel):
     eval_cp_sente: int | None = None
     mate_sente: int | None = None
     bestmove: str | None = None
+    bestmove_japanese: str | None = None
     pv: list[str] = Field(default_factory=list)
+    pv_japanese: list[str] = Field(default_factory=list)
     depth: int | None = None
     seldepth: int | None = None
     nodes: int | None = None
     nps: int | None = None
     multipv: int | None = None
     lines: list[dict[str, Any]] = Field(default_factory=list)
-

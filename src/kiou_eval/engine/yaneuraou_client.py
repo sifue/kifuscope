@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import TextIO
 
 from kiou_eval.config import Settings
-from kiou_eval.shogi import validate_sfen_position
+from kiou_eval.shogi import format_usi_move, format_usi_pv, validate_sfen_position
 
 from .eval_result import EvalResult, PrincipalVariation
 from .usi_parser import UsiInfo, normalize_score_for_sente, parse_info_line
@@ -190,6 +190,8 @@ class YaneuraOuClient:
             nps=primary_pv.nps,
             multipv=primary_pv.multipv,
             lines=lines,
+            bestmove_japanese=format_usi_move(position, bestmove),
+            pv_japanese=format_usi_pv(position, primary_pv.pv),
         )
 
     @staticmethod

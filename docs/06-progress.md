@@ -324,3 +324,19 @@ uv run python -m kiou_eval serve-realtime \
 - `docs/03-usi-yaneuraou.md`
 - `docs/05-obs-overlay.md`
 - `docs/06-progress.md`
+
+## 2026-07-07 テンプレート未生成時の案内改善
+
+### 実装・文書化した内容
+
+- GitHub checkout直後は `templates/kiou-initial` が存在しないことをWindows手順へ明記
+- 初回セットアップとして `capture-window`、`build-templates`、`recognize-image`、`serve-realtime` の順をREADMEへ追加
+- OBS文書にも初回テンプレート生成手順を追加
+- 盤面テンプレートがない場合のエラーメッセージに `build-templates` が必要なことを追加
+
+### 変更したファイル
+
+- `src/kiou_eval/recognizer/templates.py`
+- `README.md`
+- `docs/05-obs-overlay.md`
+- `docs/06-progress.md`

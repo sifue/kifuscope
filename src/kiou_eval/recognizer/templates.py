@@ -61,7 +61,11 @@ class TemplateLibrary:
         if invalid:
             raise ValueError(f"盤面テンプレートに不明なラベルがあります: {sorted(invalid)}")
         if not board_labels:
-            raise ValueError(f"盤面テンプレートがありません: {root / 'board'}")
+            raise ValueError(
+                "盤面テンプレートがありません: "
+                f"{root / 'board'}。GitHubから取得した直後はテンプレートが含まれません。"
+                "KIOUの初期局面スクリーンショットから build-templates を実行してください。"
+            )
 
     def _load_group(self, group: str) -> dict[str, list[np.ndarray]]:
         directory = self.root / group
@@ -101,4 +105,3 @@ class TemplateLibrary:
                     best_label = label
                     best_confidence = confidence
         return TemplateMatch(best_label, max(0.0, min(1.0, best_confidence)))
-

@@ -21,6 +21,13 @@ OBS側の最小構成は次の2ソース。
 
 リアルタイム認識・評価込みで起動する場合は次を使う。PowerShellでは `\` で行継続できないため、まず1行版を推奨する。
 
+GitHubからチェックアウトした直後は `templates/kiou-initial` が存在しない。初回だけ、KIOUの初期局面をキャプチャしてテンプレートを生成する。
+
+```powershell
+uv run python -m kiou_eval capture-window --title KIOU --output captures/kiou-initial.png
+uv run python -m kiou_eval build-templates captures/kiou-initial.png --sfen "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1" --calibration samples/calibration.kiou-2064x1112.example.json --output templates/kiou-initial
+```
+
 ```powershell
 uv run python -m kiou_eval serve-realtime --calibration samples/calibration.kiou-2064x1112.example.json --templates templates/kiou-initial --source window --window-title KIOU
 ```

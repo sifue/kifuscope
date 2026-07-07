@@ -51,6 +51,14 @@ def test_unchanged_position_is_kept() -> None:
     assert result.move_usi is None
 
 
+def test_unchanged_position_is_kept_even_with_strict_margin() -> None:
+    initial = BoardState.from_sfen(INITIAL_SFEN)
+    tracker = StableLegalTracker(initial, margin=1.0)
+    result = tracker.update(_observation(initial))
+    assert result.status == "ok"
+    assert result.move_usi is None
+
+
 def test_unknown_observation_is_rejected() -> None:
     initial = BoardState.from_sfen(INITIAL_SFEN)
     observation = BoardObservation((UNKNOWN,) * 81, (0.0,) * 81, None, None, 0.0)

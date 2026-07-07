@@ -43,6 +43,7 @@ class LegalMoveMatcher:
     def __init__(self, *, threshold: float = 0.90, margin: float = 0.02) -> None:
         self.threshold = threshold
         self.required_margin = margin
+        self.last_best: CandidateMatch | None = None
 
     def find(self, current: BoardState, observation: BoardObservation) -> CandidateMatch | None:
         candidates = [(current, None), *self._successors(current)]
@@ -57,7 +58,12 @@ class LegalMoveMatcher:
         best = scored[0]
         second_score = scored[1].score if len(scored) > 1 else 0.0
         margin = best.score - second_score
-        if best.score < self.threshold or margin < self.required_margin:
+        self.last_best = CandidateMatch(best.state, best.move_usi, best.score, margin)
+        if best.score < self.threshold:
+            return None
+        if best.move_usi is None:
+            return CandidateMatch(best.state, best.move_usi, best.score, margin)
+        if margin < self.required_margin:
             return None
         return CandidateMatch(best.state, best.move_usi, best.score, margin)
 
@@ -130,9 +136,16 @@ class StableLegalTracker:
         match = self.matcher.find(self.current, observation)
         if match is None:
             self._clear_pending()
+            detail = ""
+            if self.matcher.last_best is not None:
+                best = self.matcher.last_best
+                detail = (
+                    f"（最有力候補: move={best.move_usi or '現局面'}, "
+                    f"score={best.score:.3f}, margin={best.margin:.3f}）"
+                )
             return TrackingResult(
                 "recognition_failed",
-                "前局面または合法手後の局面に一致しません",
+                f"前局面または合法手後の局面に一致しません{detail}",
                 self.current,
                 None,
                 observation.confidence,

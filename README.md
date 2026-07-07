@@ -212,6 +212,12 @@ uv run python -m kiou_eval serve-realtime --calibration samples/calibration.kiou
 Invoke-RestMethod http://127.0.0.1:8765/api/eval | ConvertTo-Json -Depth 10
 ```
 
+PowerShellの文字化けが残る場合は、Windows標準の `curl.exe` で確認します。
+
+```powershell
+curl.exe -s http://127.0.0.1:8765/api/eval
+```
+
 切り分け手順:
 
 ```powershell

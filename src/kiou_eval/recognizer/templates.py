@@ -91,17 +91,33 @@ class TemplateLibrary:
         templates = self._groups.get(group, {})
         if not templates:
             raise ValueError(f"テンプレート種別がありません: {group}")
-        gray = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY) if patch.ndim == 3 else patch
+        gray = _prepare_for_match(patch)
         best_label = ""
         best_confidence = -1.0
         for label, candidates in templates.items():
             for template in candidates:
-                resized = cv2.resize(gray, (template.shape[1], template.shape[0]))
+                prepared_template = _prepare_for_match(template)
+                resized = cv2.resize(
+                    gray, (prepared_template.shape[1], prepared_template.shape[0])
+                )
                 difference = np.mean(
-                    np.abs(resized.astype(np.float32) - template.astype(np.float32))
+                    np.abs(
+                        resized.astype(np.float32) - prepared_template.astype(np.float32)
+                    )
                 )
                 confidence = 1.0 - float(difference / 255.0)
                 if confidence > best_confidence:
                     best_label = label
                     best_confidence = confidence
         return TemplateMatch(best_label, max(0.0, min(1.0, best_confidence)))
+
+
+def _prepare_for_match(image: np.ndarray) -> np.ndarray:
+    """照合前に中央領域へ寄せ、背景・グリッド線の影響を下げる。"""
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if image.ndim == 3 else image
+    height, width = gray.shape[:2]
+    margin_y = max(1, int(height * 0.12))
+    margin_x = max(1, int(width * 0.12))
+    if height - margin_y * 2 < 4 or width - margin_x * 2 < 4:
+        return gray
+    return gray[margin_y : height - margin_y, margin_x : width - margin_x]

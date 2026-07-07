@@ -377,3 +377,22 @@ uv run python -m kiou_eval serve-realtime \
 - `README.md`
 - `docs/05-obs-overlay.md`
 - `docs/06-progress.md`
+
+## 2026-07-07 背景変動へのテンプレート照合改善
+
+### 実装・文書化した内容
+
+- テンプレート照合時にマス全体ではなく中央領域を比較し、グリッド線・マス端・演出の影響を下げた
+- 初期局面SFENを `--initial-sfen` やリセットAPIで明示するコマンド例をREADMEへ追加
+- KIOUの背景・キャラクター・演出変化に対する現在設計の限界と、安定化方針をREADMEへ追記
+
+### 変更したファイル
+
+- `src/kiou_eval/recognizer/templates.py`
+- `README.md`
+- `docs/06-progress.md`
+
+### テスト結果
+
+- `tests/test_recognizer.py tests/test_legal_tracker.py tests/test_board_state.py`: 15件成功
+- `ruff check`: 成功

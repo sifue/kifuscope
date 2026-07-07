@@ -254,6 +254,20 @@ Invoke-RestMethod -Method Post http://127.0.0.1:8765/api/realtime/reset `
   -Body '{"initial_sfen":"lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1"}'
 ```
 
+現在のKIOU画面が初期局面なら、指定するSFENは初期局面です。起動時に明示する場合は次のようにします。
+
+```powershell
+uv run python -m kiou_eval serve-realtime --initial-sfen "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1" --calibration samples/calibration.kiou-2064x1112.example.json --templates templates/kiou-initial --source window --window-title KIOU
+```
+
+起動後に初期局面へ戻す場合:
+
+```powershell
+Invoke-RestMethod -Method Post http://127.0.0.1:8765/api/realtime/reset `
+  -ContentType "application/json" `
+  -Body '{"initial_sfen":"lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1"}'
+```
+
 PowerShellで日本語メッセージが文字化けする場合は、先にUTF-8へ切り替えます。
 
 ```powershell
@@ -275,6 +289,14 @@ uv run python -m kiou_eval recognize-image captures/kiou-live.png --calibration 
 ```
 
 `recognize-image` の `board_sfen_guess` が初期局面と違う場合、現在のKIOU画面は初期局面ではありません。`serve-realtime` のリセットAPIはKIOU画面自体を戻すものではないため、KIOU側を初期局面に戻すか、`board_sfen_guess` を参考に正確な現在局面SFENを作り、`POST /api/realtime/reset` の `initial_sfen` として指定してください。
+
+KIOUは左右キャラクター、背景、演出で画面全体の色が変化します。Kifuscopeは盤面クロップだけを使うため、盤外のキャラクターや背景は原則として影響しません。一方で、盤面上の光・矢印・選択枠・木目差は認識に影響します。そのため、テンプレート照合ではマス全体ではなく中央領域を主に比較し、グリッド線や端の演出の影響を下げています。根本対策としては、次の順で安定化します。
+
+1. テンプレート生成は、初期局面かつ選択枠・白矢印・黄色枠がない状態で行う
+2. KIOUウィンドウサイズと表示倍率を固定する
+3. 認識失敗時は `captures/kiou-live.png` を保存し、`board_sfen_guess` を確認する
+4. 成駒や別テーマで誤認識する場合は、正解SFEN付き画像からテンプレートを追加する
+5. それでも不安定なら、テンプレート方式から「駒文字・駒形状中心のマスク照合」または軽量分類器へ移行する
 
 最善手はUSI表記に加えて、`▲7六歩` のような配信用日本語表記 `bestmove_japanese` も返します。オーバーレイでは日本語表記を優先表示します。
 

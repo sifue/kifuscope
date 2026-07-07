@@ -79,6 +79,7 @@ class RealtimeEvaluator:
         self._last_published_sfen: str | None = None
         self._pending_evaluation: tuple[str, float] | None = None
         self._evaluation_task: asyncio.Task[None] | None = None
+        self._has_stable_overlay = False
 
     async def run(self) -> None:
         """キャンセルされるまでリアルタイム認識を続ける。"""
@@ -116,13 +117,14 @@ class RealtimeEvaluator:
             frame = await asyncio.to_thread(self._capture_frame)
         except Exception as exc:
             logger.warning("画面キャプチャに失敗しました: %s", exc)
-            await self.hub.publish(
-                OverlayState(
-                    status="recognition_failed",
-                    message=f"画面キャプチャに失敗しました: {exc}",
-                    confidence=0.0,
+            if not self._has_stable_overlay:
+                await self.hub.publish(
+                    OverlayState(
+                        status="recognition_failed",
+                        message=f"画面キャプチャに失敗しました: {exc}",
+                        confidence=0.0,
+                    )
                 )
-            )
             return
 
         async with self._lock:
@@ -131,32 +133,47 @@ class RealtimeEvaluator:
             )
             tracked = self.tracker.update(recognized.observation)
         if tracked.status == "recognition_failed":
-            await self.hub.publish(
-                OverlayState(
-                    status="recognition_failed",
-                    message=tracked.message,
-                    confidence=tracked.confidence,
-                    sfen=self.tracker.current.to_sfen(),
-                    turn=_turn_label(self.tracker.current.turn),
-                )
+            logger.warning(
+                "局面認識に失敗しました: message=%s confidence=%.3f current_sfen=%s",
+                tracked.message,
+                tracked.confidence,
+                self.tracker.current.to_sfen(),
             )
+            if not self._has_stable_overlay:
+                await self.hub.publish(
+                    OverlayState(
+                        status="recognition_failed",
+                        message=tracked.message,
+                        confidence=tracked.confidence,
+                        sfen=self.tracker.current.to_sfen(),
+                        turn=_turn_label(self.tracker.current.turn),
+                    )
+                )
             return
         if tracked.status == "position_unconfirmed":
-            await self.hub.publish(
-                OverlayState(
-                    status="position_unconfirmed",
-                    message=tracked.message,
-                    confidence=tracked.confidence,
-                    sfen=self.tracker.current.to_sfen(),
-                    turn=_turn_label(self.tracker.current.turn),
-                )
+            logger.info(
+                "局面はまだ未確定です: message=%s confidence=%.3f current_sfen=%s",
+                tracked.message,
+                tracked.confidence,
+                self.tracker.current.to_sfen(),
             )
+            if not self._has_stable_overlay:
+                await self.hub.publish(
+                    OverlayState(
+                        status="position_unconfirmed",
+                        message=tracked.message,
+                        confidence=tracked.confidence,
+                        sfen=self.tracker.current.to_sfen(),
+                        turn=_turn_label(self.tracker.current.turn),
+                    )
+                )
             return
 
         sfen = tracked.state.to_sfen()
         if not self.config.evaluate:
             if sfen != self._last_published_sfen:
                 self._last_published_sfen = sfen
+                self._has_stable_overlay = True
                 await self.hub.publish(
                     OverlayState(
                         status="ok",
@@ -187,15 +204,17 @@ class RealtimeEvaluator:
 
     async def _request_evaluation(self, sfen: str, confidence: float) -> None:
         self._pending_evaluation = (sfen, confidence)
-        await self.hub.publish(
-            OverlayState(
-                status="evaluating",
-                message="評価中",
-                confidence=confidence,
-                sfen=sfen,
-                turn=_turn_label(BoardState.from_sfen(sfen).turn),
+        logger.info("評価を開始します: sfen=%s confidence=%.3f", sfen, confidence)
+        if not self._has_stable_overlay:
+            await self.hub.publish(
+                OverlayState(
+                    status="evaluating",
+                    message="評価中",
+                    confidence=confidence,
+                    sfen=sfen,
+                    turn=_turn_label(BoardState.from_sfen(sfen).turn),
+                )
             )
-        )
         if self._evaluation_task is not None and not self._evaluation_task.done():
             await asyncio.to_thread(self._stop_search_safely)
             return
@@ -223,6 +242,7 @@ class RealtimeEvaluator:
             if self._pending_evaluation is not None:
                 continue
             self._last_published_sfen = sfen
+            self._has_stable_overlay = True
             await self.hub.publish(OverlayState.model_validate(result.to_dict()))
 
     def _stop_search_safely(self) -> None:
@@ -265,6 +285,7 @@ class RealtimeEvaluator:
             self._pending_evaluation = None
             self._last_requested_sfen = None
             self._last_published_sfen = None
+            self._has_stable_overlay = False
             message = "追跡状態をリセットしました"
             if rebuilt:
                 message = f"テンプレートを{rebuilt}枚再生成し、追跡状態をリセットしました"

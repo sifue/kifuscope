@@ -230,7 +230,9 @@ uv run python -m kiou_eval serve-realtime --calibration samples/calibration.kiou
 Invoke-RestMethod http://127.0.0.1:8765/api/eval | ConvertTo-Json -Depth 10
 ```
 
-`--no-evaluate` で `status: "ok"` になれば、画面認識と合法手追跡は動いています。その場合はエンジン評価側の問題です。`recognition_failed` や `realtime_error` の場合は、表示された `message` に従ってキャプチャ範囲・テンプレート・キャリブレーションを確認します。
+`--no-evaluate` で `status: "ok"` になれば、画面認識と合法手追跡は動いています。その場合はエンジン評価側の問題です。起動直後に `recognition_failed` や `realtime_error` の場合は、表示された `message` に従ってキャプチャ範囲・テンプレート・キャリブレーションを確認します。
+
+一度でも正常な評価値が出た後は、配信画面の安定性を優先し、一時的な `recognition_failed` や `position_unconfirmed` をOBSオーバーレイへ表示しません。直前の評価値・最善手・深さを残し、詳細な失敗内容は `serve-realtime` を起動しているコンソールログへ出力します。盤面上の演出や選択枠で一瞬 `PPPP...` のような極端な誤認識が出ても、配信画面には出さない設計です。
 
 `recognition_failed` のメッセージに `score=0.1` 前後のような低い値が出る場合、現在のKIOU画面が追跡開始局面と大きく違います。まずKIOUを初期局面へ戻してから `serve-realtime` を起動してください。対局途中から開始したい場合は、その局面の正確なSFENを用意し、`--initial-sfen "<SFEN>"` で指定する必要があります。
 

@@ -12,6 +12,6 @@
   "hand_threshold": 0.78,
   "turn_threshold": 0.78,
   "stable_frames": 3,
-  "legal_match_threshold": 0.9,
+  "legal_match_threshold": 0.85,
   "legal_margin": 0.02
 }

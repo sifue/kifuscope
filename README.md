@@ -224,6 +224,26 @@ Invoke-RestMethod http://127.0.0.1:8765/api/eval | ConvertTo-Json -Depth 10
 
 `--no-evaluate` で `status: "ok"` になれば、画面認識と合法手追跡は動いています。その場合はエンジン評価側の問題です。`recognition_failed` や `realtime_error` の場合は、表示された `message` に従ってキャプチャ範囲・テンプレート・キャリブレーションを確認します。
 
+PowerShellで日本語メッセージが文字化けする場合は、先にUTF-8へ切り替えます。
+
+```powershell
+chcp 65001
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
+```
+
+`recognition_failed` で `confidence` が `0.85`〜`0.90` 程度の場合は、盤面認識は概ね合っているが合法手追跡の閾値に届いていない状態です。`samples/calibration.kiou-2064x1112.example.json` の `legal_match_threshold` を `0.85` 程度に下げて再試行してください。
+
+```json
+"legal_match_threshold": 0.85
+```
+
+それでも失敗する場合は、起動中のKIOU画面をもう一度保存して単体認識を確認します。
+
+```powershell
+uv run python -m kiou_eval capture-window --title KIOU --output captures/kiou-live.png
+uv run python -m kiou_eval recognize-image captures/kiou-live.png --calibration samples/calibration.kiou-2064x1112.example.json --templates templates/kiou-initial
+```
+
 最善手はUSI表記に加えて、`▲7六歩` のような配信用日本語表記 `bestmove_japanese` も返します。オーバーレイでは日本語表記を優先表示します。
 
 WSL Ubuntuは、開発、単体テスト、Linux版YaneuraOu検証、画像列入力による認識ループ確認に使います。WSLでリアルタイム確認する場合は `--source images` を使ってください。WSLからWindows画面を取得するにはOBS仮想カメラやNDIなど別経路が必要になり、現時点の推奨構成ではありません。

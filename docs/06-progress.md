@@ -340,3 +340,17 @@ uv run python -m kiou_eval serve-realtime \
 - `README.md`
 - `docs/05-obs-overlay.md`
 - `docs/06-progress.md`
+
+## 2026-07-07 Windows実機認識閾値調整
+
+### 実装・文書化した内容
+
+- Windows実機で `confidence=0.890...` の `recognition_failed` が出たため、KIOU用キャリブレーション雛形の `legal_match_threshold` を `0.85` に調整
+- PowerShellでAPIの日本語メッセージが文字化けする場合のUTF-8切り替え手順をREADMEへ追加
+- `recognition_failed` 時にライブフレームを `capture-window` で保存し、`recognize-image` で単体確認する手順をREADMEへ追加
+
+### 変更したファイル
+
+- `samples/calibration.kiou-2064x1112.example.json`
+- `README.md`
+- `docs/06-progress.md`

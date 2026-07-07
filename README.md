@@ -246,6 +246,21 @@ Invoke-RestMethod -Method Post http://127.0.0.1:8765/api/realtime/reset
 http://127.0.0.1:8765/overlay?controls=1
 ```
 
+この画面には2つの操作があります。
+
+- `追跡リセット`: Kifuscope内部の追跡状態だけを初期局面へ戻す
+- `初期テンプレ再生成`: 現在のKIOU画面を初期局面として既存テンプレートを作り直し、追跡状態も戻す
+
+`初期テンプレ再生成` は、KIOUが初期局面で、駒選択・白矢印・黄色枠が出ていない状態でだけ使ってください。現在画面が対局途中の場合、誤ったテンプレートが作られます。
+
+REST APIで同じことを行う場合:
+
+```powershell
+Invoke-RestMethod -Method Post http://127.0.0.1:8765/api/realtime/reset `
+  -ContentType "application/json" `
+  -Body '{"rebuild_templates":true}'
+```
+
 対局途中の局面から追跡を開始したい場合は、正確なSFENを指定してリセットできます。
 
 ```powershell

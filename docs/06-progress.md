@@ -396,3 +396,29 @@ uv run python -m kiou_eval serve-realtime \
 
 - `tests/test_recognizer.py tests/test_legal_tracker.py tests/test_board_state.py`: 15件成功
 - `ruff check`: 成功
+
+## 2026-07-07 初期テンプレ再生成付きリセット
+
+### 実装・文書化した内容
+
+- `POST /api/realtime/reset` に `rebuild_templates` を追加し、現在のKIOU画面から初期局面テンプレートを作り直せるようにした
+- テンプレート再生成時は既存テンプレートへ追記せず、`board` / `hand` / `turn` の各テンプレート群を置き換えるようにした
+- `/overlay?controls=1` に「初期テンプレ再生成」ボタンを追加した
+- 再生成ボタンはOBS用の通常 `/overlay` には表示しない
+- READMEに操作ボタンとREST APIの使い方を追記した
+
+### 変更したファイル
+
+- `src/kiou_eval/runtime/realtime.py`
+- `src/kiou_eval/server/app.py`
+- `src/kiou_eval/server/schemas.py`
+- `src/kiou_eval/overlay/overlay.html`
+- `src/kiou_eval/overlay/overlay.js`
+- `tests/test_server.py`
+- `README.md`
+- `docs/06-progress.md`
+
+### 注意点
+
+- `初期テンプレ再生成` はKIOUが初期局面で、駒選択・矢印・黄色枠がない状態でだけ使用する
+- 対局途中の画面で実行すると、初期局面テンプレートとして誤った駒画像が登録される

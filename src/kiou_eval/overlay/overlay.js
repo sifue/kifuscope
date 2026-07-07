@@ -7,6 +7,7 @@ const senteBar = document.querySelector("#sente-bar");
 const barLabel = document.querySelector("#bar-label");
 const controls = document.querySelector("#controls");
 const resetTracker = document.querySelector("#reset-tracker");
+const rebuildReset = document.querySelector("#rebuild-reset");
 
 if (new URLSearchParams(location.search).get("controls") === "1") {
   controls.classList.remove("hidden");
@@ -19,6 +20,24 @@ resetTracker.addEventListener("click", async () => {
     update(await response.json());
   } catch {
     status.textContent = "追跡リセットに失敗しました";
+  }
+});
+
+rebuildReset.addEventListener("click", async () => {
+  const confirmed = window.confirm(
+    "現在のKIOU画面を初期局面としてテンプレートを再生成します。駒選択・矢印・黄色枠がない初期局面ですか？"
+  );
+  if (!confirmed) return;
+  status.textContent = "テンプレートを再生成中";
+  try {
+    const response = await fetch("/api/realtime/reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rebuild_templates: true }),
+    });
+    update(await response.json());
+  } catch {
+    status.textContent = "テンプレート再生成に失敗しました";
   }
 });
 

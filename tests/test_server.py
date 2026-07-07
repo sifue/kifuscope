@@ -5,7 +5,16 @@ from kiou_eval.server.schemas import OverlayState
 
 
 class _FakeRealtimeRunner:
-    async def reset(self, initial_sfen: str | None = None) -> OverlayState:
+    def __init__(self) -> None:
+        self.rebuild_templates = False
+
+    async def reset(
+        self,
+        initial_sfen: str | None = None,
+        *,
+        rebuild_templates: bool = False,
+    ) -> OverlayState:
+        self.rebuild_templates = rebuild_templates
         return OverlayState(
             status="recognizing",
             message="追跡状態をリセットしました",
@@ -50,9 +59,21 @@ def test_realtime_reset_requires_realtime_runner() -> None:
 
 def test_realtime_reset_endpoint() -> None:
     app = create_app()
+    runner = _FakeRealtimeRunner()
     with TestClient(app) as client:
-        app.state.realtime_runner = _FakeRealtimeRunner()
+        app.state.realtime_runner = runner
         response = client.post("/api/realtime/reset", json={"initial_sfen": "dummy"})
     assert response.status_code == 200
     assert response.json()["status"] == "recognizing"
     assert response.json()["sfen"] == "dummy"
+    assert runner.rebuild_templates is False
+
+
+def test_realtime_reset_rebuild_templates_endpoint() -> None:
+    app = create_app()
+    runner = _FakeRealtimeRunner()
+    with TestClient(app) as client:
+        app.state.realtime_runner = runner
+        response = client.post("/api/realtime/reset", json={"rebuild_templates": True})
+    assert response.status_code == 200
+    assert runner.rebuild_templates is True

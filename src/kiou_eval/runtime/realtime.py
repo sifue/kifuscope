@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import shutil
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
@@ -17,6 +19,7 @@ from kiou_eval.recognizer import (
     Calibration,
     ScreenRecognizer,
     TemplateLibrary,
+    build_templates,
     capture_screen,
     capture_window,
     load_image,
@@ -27,6 +30,7 @@ from kiou_eval.shogi import INITIAL_SFEN, BoardState, StableLegalTracker
 
 logger = logging.getLogger(__name__)
 CaptureSource = Literal["window", "monitor", "images"]
+_REBUILD_TEMPLATE_GROUPS = ("board", "hand", "turn")
 
 
 @dataclass(frozen=True, slots=True)
@@ -234,26 +238,75 @@ class RealtimeEvaluator:
             with contextlib.suppress(asyncio.CancelledError):
                 await self._evaluation_task
 
-    async def reset(self, initial_sfen: str | None = None) -> OverlayState:
+    async def reset(
+        self,
+        initial_sfen: str | None = None,
+        *,
+        rebuild_templates: bool = False,
+    ) -> OverlayState:
         """追跡状態を初期局面へ戻す。"""
         sfen = initial_sfen or self.config.initial_sfen
         state = BoardState.from_sfen(sfen)
         state.validate()
         async with self._lock:
             await asyncio.to_thread(self._stop_search_safely)
+            rebuilt = 0
+            if rebuild_templates:
+                frame = await asyncio.to_thread(self._capture_frame)
+                rebuilt = await asyncio.to_thread(
+                    self._rebuild_templates,
+                    frame,
+                    state,
+                )
+                self.recognizer = ScreenRecognizer(
+                    self.calibration, TemplateLibrary(self.config.templates_path)
+                )
             self.tracker = self._create_tracker(sfen)
             self._pending_evaluation = None
             self._last_requested_sfen = None
             self._last_published_sfen = None
+            message = "追跡状態をリセットしました"
+            if rebuilt:
+                message = f"テンプレートを{rebuilt}枚再生成し、追跡状態をリセットしました"
             overlay = OverlayState(
                 status="recognizing",
-                message="追跡状態をリセットしました",
+                message=message,
                 confidence=0.0,
                 sfen=state.to_sfen(),
                 turn=_turn_label(state.turn),
             )
             await self.hub.publish(overlay)
             return overlay
+
+    def _rebuild_templates(self, frame: np.ndarray, state: BoardState) -> int:
+        """現在フレームから初期局面テンプレートを作り直す。"""
+        templates_path = self.config.templates_path
+        templates_path.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(
+            prefix=".rebuild-templates-", dir=templates_path
+        ) as temporary:
+            temporary_path = Path(temporary)
+            written = build_templates(frame, state, self.calibration, temporary_path)
+            for group in _REBUILD_TEMPLATE_GROUPS:
+                source = temporary_path / group
+                target = templates_path / group
+                backup = templates_path / f".{group}.backup"
+                if backup.exists():
+                    shutil.rmtree(backup)
+                if target.exists():
+                    target.rename(backup)
+                try:
+                    if source.exists():
+                        shutil.move(str(source), str(target))
+                except Exception:
+                    if target.exists():
+                        shutil.rmtree(target)
+                    if backup.exists():
+                        backup.rename(target)
+                    raise
+                if backup.exists():
+                    shutil.rmtree(backup)
+            return written
 
     def _create_tracker(self, initial_sfen: str) -> StableLegalTracker:
         return StableLegalTracker(

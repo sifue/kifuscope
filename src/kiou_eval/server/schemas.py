@@ -18,6 +18,7 @@ class ResetRequest(BaseModel):
     """リアルタイム追跡リセットリクエスト。"""
 
     initial_sfen: str | None = Field(default=None, min_length=1)
+    rebuild_templates: bool = False
 
 
 class OverlayState(BaseModel):

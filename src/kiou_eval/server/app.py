@@ -147,9 +147,14 @@ def create_app(
                 detail="リアルタイム認識は起動していません。serve-realtimeで起動してください。",
             )
         try:
-            return await runner.reset(request.initial_sfen if request else None)
+            return await runner.reset(
+                request.initial_sfen if request else None,
+                rebuild_templates=bool(request and request.rebuild_templates),
+            )
         except (SfenError, PositionValidationError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except (OSError, RuntimeError) as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     @app.websocket("/ws/eval")
     async def evaluation_websocket(websocket: WebSocket) -> None:

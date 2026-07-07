@@ -466,3 +466,19 @@ uv run python -m kiou_eval serve-realtime \
 - `README.md`
 - `docs/04-screen-recognition.md`
 - `docs/06-progress.md`
+
+## 2026-07-07 最終手ハイライトへの照合耐性改善
+
+### 実装・文書化した内容
+
+- テンプレート照合の前処理を変更し、背景色そのものより駒文字・輪郭の局所コントラストを重く比較するようにした
+- 赤い最終手ハイライトや黄色枠で背景色が変わっても、駒種の誤認識が起きにくいようにした
+- 空マス識別を維持するため、元画像成分も一部比較に残した
+- READMEに、毎フレーム外部画像認識へ送るのではなく、まずローカル照合の背景耐性を上げる運用方針を追記した
+
+### 変更したファイル
+
+- `src/kiou_eval/recognizer/templates.py`
+- `README.md`
+- `docs/04-screen-recognition.md`
+- `docs/06-progress.md`

@@ -113,11 +113,22 @@ class TemplateLibrary:
 
 
 def _prepare_for_match(image: np.ndarray) -> np.ndarray:
-    """照合前に中央領域へ寄せ、背景・グリッド線の影響を下げる。"""
+    """照合前に背景色の影響を下げ、駒文字・輪郭を主に残す。"""
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if image.ndim == 3 else image
     height, width = gray.shape[:2]
     margin_y = max(1, int(height * 0.12))
     margin_x = max(1, int(width * 0.12))
-    if height - margin_y * 2 < 4 or width - margin_x * 2 < 4:
-        return gray
-    return gray[margin_y : height - margin_y, margin_x : width - margin_x]
+    if height - margin_y * 2 >= 4 and width - margin_x * 2 >= 4:
+        gray = gray[margin_y : height - margin_y, margin_x : width - margin_x]
+
+    raw = gray.astype(np.uint8)
+    sigma = max(1.0, min(raw.shape[:2]) / 8)
+    background = cv2.GaussianBlur(raw, (0, 0), sigmaX=sigma, sigmaY=sigma)
+    contrast = cv2.absdiff(raw, background)
+    if int(contrast.max()) > 0:
+        contrast = cv2.normalize(contrast, None, 0, 255, cv2.NORM_MINMAX)
+
+    # 局所コントラストを75%、元画像を25%の重みで比較する。
+    # これにより赤い最終手ハイライトなどの背景色変化を抑えつつ、
+    # 空マスのような低コントラストテンプレートも識別できる。
+    return np.vstack((contrast, contrast, contrast, raw))

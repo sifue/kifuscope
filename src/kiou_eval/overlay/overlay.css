@@ -23,4 +23,15 @@ body { margin: 0; background: transparent; color: #f7f5ef; }
 .move-row span, .meta { color: #b7bbc2; }
 .meta { display: flex; justify-content: space-between; margin-top: 13px; font-size: 14px; }
 .error .score, .error #status { color: #ff8d84; }
-
+.hidden { display: none; }
+.controls { margin-top: 14px; text-align: right; }
+.controls button {
+  padding: 7px 12px;
+  color: #f7f5ef;
+  background: #3a414d;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  font: inherit;
+  cursor: pointer;
+}
+.controls button:hover { background: #4a5362; }

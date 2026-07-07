@@ -143,6 +143,11 @@ class StableLegalTracker:
                     f"（最有力候補: move={best.move_usi or '現局面'}, "
                     f"score={best.score:.3f}, margin={best.margin:.3f}）"
                 )
+                if best.move_usi is None and best.score < self.matcher.threshold:
+                    detail += (
+                        "。KIOU画面が追跡開始局面から進んでいる、または"
+                        "初期局面SFENと画面が一致していない可能性があります"
+                    )
             return TrackingResult(
                 "recognition_failed",
                 f"前局面または合法手後の局面に一致しません{detail}",

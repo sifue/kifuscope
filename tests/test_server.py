@@ -1,6 +1,16 @@
 from fastapi.testclient import TestClient
 
 from kiou_eval.server import create_app
+from kiou_eval.server.schemas import OverlayState
+
+
+class _FakeRealtimeRunner:
+    async def reset(self, initial_sfen: str | None = None) -> OverlayState:
+        return OverlayState(
+            status="recognizing",
+            message="追跡状態をリセットしました",
+            sfen=initial_sfen,
+        )
 
 
 def test_initial_evaluation_state() -> None:
@@ -31,3 +41,18 @@ def test_demo_overlay_updates_state() -> None:
     assert response.status_code == 200
     assert response.json()["message"] == "デモ評価値"
 
+
+def test_realtime_reset_requires_realtime_runner() -> None:
+    with TestClient(create_app()) as client:
+        response = client.post("/api/realtime/reset")
+    assert response.status_code == 409
+
+
+def test_realtime_reset_endpoint() -> None:
+    app = create_app()
+    with TestClient(app) as client:
+        app.state.realtime_runner = _FakeRealtimeRunner()
+        response = client.post("/api/realtime/reset", json={"initial_sfen": "dummy"})
+    assert response.status_code == 200
+    assert response.json()["status"] == "recognizing"
+    assert response.json()["sfen"] == "dummy"

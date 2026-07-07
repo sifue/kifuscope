@@ -5,6 +5,22 @@ const depth = document.querySelector("#depth");
 const status = document.querySelector("#status");
 const senteBar = document.querySelector("#sente-bar");
 const barLabel = document.querySelector("#bar-label");
+const controls = document.querySelector("#controls");
+const resetTracker = document.querySelector("#reset-tracker");
+
+if (new URLSearchParams(location.search).get("controls") === "1") {
+  controls.classList.remove("hidden");
+}
+
+resetTracker.addEventListener("click", async () => {
+  status.textContent = "追跡状態をリセット中";
+  try {
+    const response = await fetch("/api/realtime/reset", { method: "POST" });
+    update(await response.json());
+  } catch {
+    status.textContent = "追跡リセットに失敗しました";
+  }
+});
 
 function formatScore(data) {
   if (data.score_type === "mate" && data.mate_sente !== null) {

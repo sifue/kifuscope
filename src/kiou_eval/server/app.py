@@ -18,7 +18,7 @@ from kiou_eval.config import Settings
 from kiou_eval.engine import EngineError, YaneuraOuClient
 from kiou_eval.shogi import INITIAL_SFEN, PositionValidationError, SfenError
 
-from .schemas import AnalyzeRequest, OverlayState
+from .schemas import AnalyzeRequest, OverlayState, ResetRequest
 from .websocket import EvaluationHub
 
 if TYPE_CHECKING:
@@ -72,9 +72,8 @@ def create_app(
         if realtime is not None:
             from kiou_eval.runtime import RealtimeEvaluator
 
-            realtime_task = asyncio.create_task(
-                RealtimeEvaluator(resolved, hub, engine, realtime).run()
-            )
+            _app.state.realtime_runner = RealtimeEvaluator(resolved, hub, engine, realtime)
+            realtime_task = asyncio.create_task(_app.state.realtime_runner.run())
         try:
             yield
         finally:
@@ -97,6 +96,7 @@ def create_app(
     app.state.settings = resolved
     app.state.hub = hub
     app.state.engine = engine
+    app.state.realtime_runner = None
     app.mount("/static", StaticFiles(directory=OVERLAY_DIR), name="overlay-static")
 
     @app.get("/", include_in_schema=False)
@@ -137,6 +137,19 @@ def create_app(
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         await hub.publish(state)
         return state
+
+    @app.post("/api/realtime/reset", response_model=OverlayState)
+    async def reset_realtime(request: ResetRequest | None = None) -> OverlayState:
+        runner = app.state.realtime_runner
+        if runner is None:
+            raise HTTPException(
+                status_code=409,
+                detail="リアルタイム認識は起動していません。serve-realtimeで起動してください。",
+            )
+        try:
+            return await runner.reset(request.initial_sfen if request else None)
+        except (SfenError, PositionValidationError, ValueError) as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @app.websocket("/ws/eval")
     async def evaluation_websocket(websocket: WebSocket) -> None:

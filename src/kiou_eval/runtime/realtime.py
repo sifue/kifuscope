@@ -66,13 +66,10 @@ class RealtimeEvaluator:
         self.engine = engine
         self.config = config
         calibration = Calibration.from_file(config.calibration_path)
+        self.calibration = calibration
         self.recognizer = ScreenRecognizer(calibration, TemplateLibrary(config.templates_path))
-        self.tracker = StableLegalTracker(
-            BoardState.from_sfen(config.initial_sfen),
-            stable_frames=calibration.stable_frames,
-            threshold=calibration.legal_match_threshold,
-            margin=calibration.legal_margin,
-        )
+        self.tracker = self._create_tracker(config.initial_sfen)
+        self._lock = asyncio.Lock()
         self._image_index = 0
         self._last_requested_sfen: str | None = None
         self._last_published_sfen: str | None = None
@@ -124,10 +121,11 @@ class RealtimeEvaluator:
             )
             return
 
-        recognized = self.recognizer.recognize(
-            frame, move_number=self.tracker.current.move_number
-        )
-        tracked = self.tracker.update(recognized.observation)
+        async with self._lock:
+            recognized = self.recognizer.recognize(
+                frame, move_number=self.tracker.current.move_number
+            )
+            tracked = self.tracker.update(recognized.observation)
         if tracked.status == "recognition_failed":
             await self.hub.publish(
                 OverlayState(
@@ -235,6 +233,35 @@ class RealtimeEvaluator:
             self._evaluation_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._evaluation_task
+
+    async def reset(self, initial_sfen: str | None = None) -> OverlayState:
+        """追跡状態を初期局面へ戻す。"""
+        sfen = initial_sfen or self.config.initial_sfen
+        state = BoardState.from_sfen(sfen)
+        state.validate()
+        async with self._lock:
+            await asyncio.to_thread(self._stop_search_safely)
+            self.tracker = self._create_tracker(sfen)
+            self._pending_evaluation = None
+            self._last_requested_sfen = None
+            self._last_published_sfen = None
+            overlay = OverlayState(
+                status="recognizing",
+                message="追跡状態をリセットしました",
+                confidence=0.0,
+                sfen=state.to_sfen(),
+                turn=_turn_label(state.turn),
+            )
+            await self.hub.publish(overlay)
+            return overlay
+
+    def _create_tracker(self, initial_sfen: str) -> StableLegalTracker:
+        return StableLegalTracker(
+            BoardState.from_sfen(initial_sfen),
+            stable_frames=self.calibration.stable_frames,
+            threshold=self.calibration.legal_match_threshold,
+            margin=self.calibration.legal_margin,
+        )
 
 
 def engine_analyze(engine: YaneuraOuClient, sfen: str) -> object:

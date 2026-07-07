@@ -354,3 +354,26 @@ uv run python -m kiou_eval serve-realtime \
 - `samples/calibration.kiou-2064x1112.example.json`
 - `README.md`
 - `docs/06-progress.md`
+
+## 2026-07-07 追跡リセットAPI・操作ボタン
+
+### 実装した内容
+
+- `POST /api/realtime/reset` を追加し、起動中のリアルタイム追跡状態を初期局面へ戻せるようにした
+- リクエストJSONで `initial_sfen` を指定した場合、その局面から追跡を再開できるようにした
+- `/overlay?controls=1` のときだけ表示される「追跡リセット」ボタンを追加
+- OBS用の通常 `/overlay` には操作ボタンを表示しない
+- リセットAPIの単体テストを追加
+
+### 変更したファイル
+
+- `src/kiou_eval/runtime/realtime.py`
+- `src/kiou_eval/server/app.py`
+- `src/kiou_eval/server/schemas.py`
+- `src/kiou_eval/overlay/overlay.html`
+- `src/kiou_eval/overlay/overlay.css`
+- `src/kiou_eval/overlay/overlay.js`
+- `tests/test_server.py`
+- `README.md`
+- `docs/05-obs-overlay.md`
+- `docs/06-progress.md`

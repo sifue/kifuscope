@@ -182,6 +182,8 @@ uv run python -m kiou_eval recognize-image captures/kiou-initial.png --calibrati
 
 `status` が `board_observed` または `ok` なら、リアルタイム起動へ進めます。
 
+重要: `serve-realtime` は、既定では初期局面SFENから合法手を1手ずつ追跡します。そのため、起動時点のKIOU画面がすでに対局途中まで進んでいると、初期局面にも1手後の合法局面にも一致せず `recognition_failed` になります。CPU対局では、対局開始前または初期局面で一時停止している状態で `serve-realtime` を起動してください。
+
 PowerShellで複数行に分ける場合、行末はバックスラッシュ `\` ではなくバッククォート `` ` `` です。コピーミスを避けるなら、まず1行版を使ってください。
 
 ```powershell
@@ -229,6 +231,28 @@ Invoke-RestMethod http://127.0.0.1:8765/api/eval | ConvertTo-Json -Depth 10
 ```
 
 `--no-evaluate` で `status: "ok"` になれば、画面認識と合法手追跡は動いています。その場合はエンジン評価側の問題です。`recognition_failed` や `realtime_error` の場合は、表示された `message` に従ってキャプチャ範囲・テンプレート・キャリブレーションを確認します。
+
+`recognition_failed` のメッセージに `score=0.1` 前後のような低い値が出る場合、現在のKIOU画面が追跡開始局面と大きく違います。まずKIOUを初期局面へ戻してから `serve-realtime` を起動してください。対局途中から開始したい場合は、その局面の正確なSFENを用意し、`--initial-sfen "<SFEN>"` で指定する必要があります。
+
+起動後に追跡状態だけを初期局面へ戻したい場合は、REST APIを使います。
+
+```powershell
+Invoke-RestMethod -Method Post http://127.0.0.1:8765/api/realtime/reset
+```
+
+ブラウザから操作したい場合は、操作ボタン付きでオーバーレイを開きます。このURLは確認用です。OBSには通常の `/overlay` を使ってください。
+
+```text
+http://127.0.0.1:8765/overlay?controls=1
+```
+
+対局途中の局面から追跡を開始したい場合は、正確なSFENを指定してリセットできます。
+
+```powershell
+Invoke-RestMethod -Method Post http://127.0.0.1:8765/api/realtime/reset `
+  -ContentType "application/json" `
+  -Body '{"initial_sfen":"lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1"}'
+```
 
 PowerShellで日本語メッセージが文字化けする場合は、先にUTF-8へ切り替えます。
 

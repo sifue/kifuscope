@@ -14,6 +14,12 @@ class AnalyzeRequest(BaseModel):
     movetime_ms: int | None = Field(default=None, ge=1, le=300_000)
 
 
+class ResetRequest(BaseModel):
+    """リアルタイム追跡リセットリクエスト。"""
+
+    initial_sfen: str | None = Field(default=None, min_length=1)
+
+
 class OverlayState(BaseModel):
     """オーバーレイへ配信する共通状態。"""
 

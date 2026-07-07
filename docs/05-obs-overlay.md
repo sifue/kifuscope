@@ -44,6 +44,8 @@ uv run python -m kiou_eval serve-realtime `
 
 起動後、OBS Browser Sourceは通常通り `http://127.0.0.1:8765/overlay` を参照する。Kifuscope側は `KIOU` ウィンドウを直接キャプチャし、局面未確定・認識失敗・評価中・評価完了の状態をWebSocketで配信する。
 
+追跡状態を初期局面へ戻す場合は、確認用ブラウザで `http://127.0.0.1:8765/overlay?controls=1` を開き、「追跡リセット」を押す。OBSには操作ボタンのない通常の `/overlay` を使う。REST APIから操作する場合は `POST /api/realtime/reset` を呼ぶ。
+
 この `--source window` 構成では、棋桜、Kifuscope、OBSをすべてWindows側で起動する。WSL Ubuntu上でKifuscopeを起動しても、Windows側の `KIOU` ウィンドウは直接取得できない。WSLは開発・テスト・画像列検証用とし、本番配信ではWindows側のPython環境から起動する。
 
 ## 更新仕様

@@ -43,6 +43,18 @@ PowerShellで確認する。
 Test-Path C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\eval\model.onnx
 ```
 
+`model.onnx` はdlshogiの公開モデルを取得して配置する。例として、DeepLearningShogiの `dr2_exhi` Releaseから `model-dr2_exhi.zip` を取得し、展開後の `model-dr2_exhi.onnx` を `model.onnx` にリネームする。`.ini` がある場合も同様にリネームする。
+
+```text
+model-dr2_exhi.onnx      -> eval\model.onnx
+model-dr2_exhi.onnx.ini  -> eval\model.onnx.ini
+```
+
+参考:
+
+- [DeepLearningShogi dr2_exhi Release](https://github.com/TadaoYamaoka/DeepLearningShogi/releases/tag/dr2_exhi)
+- [dlshogi Windows版ビルド済みファイル公開 - TadaoYamaokaの日記](https://tadaoyamaoka.hatenablog.com/entry/2021/08/17/000710)
+
 `No such option: Threads` が出る場合は `.env.local` に次を設定する。
 
 ```dotenv
@@ -64,6 +76,12 @@ YANEAURAOU_MOVETIME_MS=300
 YANEAURAOU_EXTRA_OPTIONS=
 ```
 
+TensorRT版は初回起動時やモデル最適化時に `isready` 応答まで時間がかかる場合がある。その場合はタイムアウトを延ばす。
+
+```dotenv
+YANEAURAOU_COMMAND_TIMEOUT_SEC=180
+```
+
 TensorRT版固有のUSIオプションを指定する場合。
 
 ```dotenv
@@ -71,6 +89,8 @@ YANEAURAOU_EXTRA_OPTIONS=SomeOption=Value;AnotherOption=123
 ```
 
 ふかうら王TensorRT版はNVIDIA GPU向けである。公式ReleaseではTensorRT版にNVIDIA GPUが必要とされ、配布版にはCUDA、TensorRT、cuDNNのランタイムが同梱される。DLLのバージョン競合を避けるため、公式Wikiの説明どおり、エンジン本体、同梱DLL、評価モデルを同じ配布フォルダ構成で置く。Kifuscopeは実行ファイルの親ディレクトリを作業ディレクトリにして起動するため、相対パスで配置されたDLLや `eval/` を読みやすい。
+
+切り分けは、まずDeep ORT CPU版で `check-engine` と `analyze-sfen` を通し、その後TensorRT版へ切り替える順を推奨する。CPU版で成功してTensorRT版だけ失敗する場合、Kifuscope本体ではなくGPU、DLL、TensorRTエンジン生成、モデル形式の問題に絞り込める。
 
 参考:
 

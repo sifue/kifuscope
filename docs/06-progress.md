@@ -286,3 +286,22 @@ uv run python -m kiou_eval serve-realtime \
 ### テスト結果
 
 - `uv run pytest -q tests/test_yaneuraou_client.py`: 5件成功
+
+## 2026-07-07 CPU版切り分け・モデル配置手順
+
+### 実装・文書化した内容
+
+- `YANEAURAOU_COMMAND_TIMEOUT_SEC` を追加し、TensorRT版の初回最適化などで `isready` 応答が遅い場合にタイムアウトを延ばせるようにした
+- まずDeep ORT CPU版で `check-engine` と `analyze-sfen` を通し、その後TensorRT版へ切り替える切り分け手順をREADMEとUSI文書へ追記
+- `model-dr2_exhi.onnx` を `eval/model.onnx` へリネームして配置する手順を追記
+- `model-dr2_exhi.onnx.ini` がある場合は `eval/model.onnx.ini` へリネームする手順を追記
+- DeepLearningShogi Releaseと解説記事へのリンクを追記
+
+### 変更したファイル
+
+- `src/kiou_eval/config.py`
+- `src/kiou_eval/engine/yaneuraou_client.py`
+- `tests/test_config.py`
+- `README.md`
+- `docs/03-usi-yaneuraou.md`
+- `docs/06-progress.md`

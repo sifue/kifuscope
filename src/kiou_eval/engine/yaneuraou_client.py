@@ -28,9 +28,9 @@ class EngineError(RuntimeError):
 class YaneuraOuClient:
     """1プロセスを逐次利用する同期USIクライアント。"""
 
-    def __init__(self, settings: Settings, *, command_timeout: float = 15.0) -> None:
+    def __init__(self, settings: Settings, *, command_timeout: float | None = None) -> None:
         self.settings = settings
-        self.command_timeout = command_timeout
+        self.command_timeout = command_timeout or settings.command_timeout_sec
         self._process: subprocess.Popen[str] | None = None
         self._lines: queue.Queue[str | None] = queue.Queue()
         self._recent_output: deque[str] = deque(maxlen=5)

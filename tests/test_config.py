@@ -14,6 +14,11 @@ def test_threads_can_be_disabled() -> None:
     assert settings.threads == 0
 
 
+def test_command_timeout_can_be_extended() -> None:
+    settings = Settings(command_timeout_sec=180)
+    assert settings.command_timeout_sec == 180
+
+
 def test_cli_override_copy() -> None:
     settings = Settings(server_port=8765)
     overridden = settings.with_overrides(server_port=9000, server_host=None)

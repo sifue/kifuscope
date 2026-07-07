@@ -28,6 +28,7 @@ class RecognitionResult:
             "message": self.message,
             "confidence": self.observation.confidence,
             "sfen": self.sfen,
+            "board_sfen_guess": self.observation.to_board_sfen_guess(),
             "turn": self.observation.turn,
             "hands": self.observation.hands,
             "squares": squares,

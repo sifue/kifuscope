@@ -2,6 +2,7 @@ import pytest
 
 from kiou_eval.shogi import (
     INITIAL_SFEN,
+    BoardObservation,
     BoardState,
     PositionValidationError,
     validate_sfen_position,
@@ -35,3 +36,9 @@ def test_nifu_is_rejected() -> None:
 
 def test_validate_sfen_position() -> None:
     assert validate_sfen_position(INITIAL_SFEN).turn == "b"
+
+
+def test_board_observation_can_guess_board_sfen() -> None:
+    state = BoardState.from_sfen(INITIAL_SFEN)
+    observation = BoardObservation(state.squares, (1.0,) * 81, None, None, 1.0)
+    assert observation.to_board_sfen_guess() == INITIAL_SFEN

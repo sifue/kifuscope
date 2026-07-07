@@ -148,6 +148,9 @@ class StableLegalTracker:
                         "。KIOU画面が追跡開始局面から進んでいる、または"
                         "初期局面SFENと画面が一致していない可能性があります"
                     )
+            board_sfen_guess = observation.to_board_sfen_guess()
+            if board_sfen_guess is not None:
+                detail += f"。画像から推定した盤面SFEN: {board_sfen_guess}"
             return TrackingResult(
                 "recognition_failed",
                 f"前局面または合法手後の局面に一致しません{detail}",

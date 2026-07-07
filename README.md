@@ -274,6 +274,8 @@ uv run python -m kiou_eval capture-window --title KIOU --output captures/kiou-li
 uv run python -m kiou_eval recognize-image captures/kiou-live.png --calibration samples/calibration.kiou-2064x1112.example.json --templates templates/kiou-initial
 ```
 
+`recognize-image` の `board_sfen_guess` が初期局面と違う場合、現在のKIOU画面は初期局面ではありません。`serve-realtime` のリセットAPIはKIOU画面自体を戻すものではないため、KIOU側を初期局面に戻すか、`board_sfen_guess` を参考に正確な現在局面SFENを作り、`POST /api/realtime/reset` の `initial_sfen` として指定してください。
+
 最善手はUSI表記に加えて、`▲7六歩` のような配信用日本語表記 `bestmove_japanese` も返します。オーバーレイでは日本語表記を優先表示します。
 
 WSL Ubuntuは、開発、単体テスト、Linux版YaneuraOu検証、画像列入力による認識ループ確認に使います。WSLでリアルタイム確認する場合は `--source images` を使ってください。WSLからWindows画面を取得するにはOBS仮想カメラやNDIなど別経路が必要になり、現時点の推奨構成ではありません。

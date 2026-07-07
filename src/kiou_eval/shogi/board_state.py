@@ -194,6 +194,12 @@ class BoardObservation:
         """盤面81マスだけが全て確定しているかを返す。"""
         return not any(square is UNKNOWN for square in self.squares)
 
+    def to_board_sfen_guess(self) -> str | None:
+        """盤面だけから推定SFENを作る。手番・持ち駒・手数は仮値を使う。"""
+        if not self.has_complete_board():
+            return None
+        return BoardState(self.squares, {}, "b", 1).to_sfen()  # type: ignore[arg-type]
+
 
 class _UnknownSquare:
     def __repr__(self) -> str:

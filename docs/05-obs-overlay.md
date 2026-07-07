@@ -19,13 +19,19 @@ OBS側の最小構成は次の2ソース。
 
 対局者が見る画面・プロジェクター・共有画面には、ブラウザソースを含めない。
 
-リアルタイム認識・評価込みで起動する場合は次を使う。
+リアルタイム認識・評価込みで起動する場合は次を使う。PowerShellでは `\` で行継続できないため、まず1行版を推奨する。
 
-```bash
-uv run python -m kiou_eval serve-realtime \
-  --calibration samples/calibration.kiou-2064x1112.example.json \
-  --templates templates/kiou-initial \
-  --source window \
+```powershell
+uv run python -m kiou_eval serve-realtime --calibration samples/calibration.kiou-2064x1112.example.json --templates templates/kiou-initial --source window --window-title KIOU
+```
+
+PowerShellで複数行に分ける場合は、行末にバッククォート `` ` `` を使う。
+
+```powershell
+uv run python -m kiou_eval serve-realtime `
+  --calibration samples/calibration.kiou-2064x1112.example.json `
+  --templates templates/kiou-initial `
+  --source window `
   --window-title KIOU
 ```
 

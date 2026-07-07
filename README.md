@@ -17,57 +17,54 @@
 uv sync
 ```
 
-YaneuraOu本体とDLLはリポジトリへコピーしません。既定では次のWindowsパスを参照します。
+YaneuraOu本体、DLL、評価モデルはリポジトリへコピーしません。外部に配置したエンジンを `.env.local` で指定します。設定の優先順位は、CLI引数、環境変数、`.env.local`、`.env`、既定値です。
 
-```text
-C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\YaneuraOu-Deep-ORT-CPU.exe
-```
+### 推奨: まずWindows CPU版で接続確認する
 
-別の場所にある場合は、作業ディレクトリの `.env` に設定します。
+最初はDeep ORT CPU版で `check-engine` と `analyze-sfen` を通してください。CPU版で通れば、Kifuscope本体、USI通信、モデル配置の基本経路が正常だと判断できます。その後にTensorRT版へ切り替えると、GPU/DLL/TensorRT初回最適化の問題を分離できます。
+
+`.env.local` 例:
 
 ```dotenv
 YANEAURAOU_ENGINE_PATH=C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\YaneuraOu-Deep-ORT-CPU.exe
+YANEAURAOU_THREADS=0
 YANEAURAOU_HASH_MB=1024
-YANEAURAOU_THREADS=4
 YANEAURAOU_MULTIPV=3
 YANEAURAOU_MOVETIME_MS=500
-YANEAURAOU_COMMAND_TIMEOUT_SEC=15
+YANEAURAOU_COMMAND_TIMEOUT_SEC=60
 YANEAURAOU_EXTRA_OPTIONS=
 SERVER_HOST=127.0.0.1
 SERVER_PORT=8765
 ```
 
-Linuxでは、エンジンをリポジトリ外へ配置して実行権限を付けます。
+Deep系エンジンは `Threads` USIオプションを持たない場合があるため、Windowsでは `YANEAURAOU_THREADS=0` を基本にします。`0` の場合、Kifuscopeは `setoption name Threads ...` を送信しません。通常のYaneuraOuなどでThreadsを使いたい場合だけ `YANEAURAOU_THREADS=4` のように明示してください。
 
-```bash
-chmod +x /home/user/Apps/yaneuraou/YaneuraOu
-```
-
-```dotenv
-YANEAURAOU_ENGINE_PATH=/home/user/Apps/yaneuraou/YaneuraOu
-```
-
-NNUE版では通常、実行ファイルの親ディレクトリ以下に `eval/nn.bin` が必要です。エンジンと評価関数のアーキテクチャが一致する配布物を使用してください。
-
-Windowsの `YaneuraOu-Deep-ORT-CPU` 版では、通常 `eval/model.onnx` とONNX Runtime DLL群が必要です。次のエラーが出る場合は、Deep ORT CPU版の配布物から `eval/model.onnx` を配置してください。
+CPU版の配置例:
 
 ```text
-Error! : C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\eval/model.onnx file not found
+C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\
+  YaneuraOu-Deep-ORT-CPU.exe
+  onnxruntime.dll
+  onnxruntime_providers_shared.dll
+  eval\
+    model.onnx
+    model.onnx.ini
 ```
 
-PowerShellで確認できます。
+`model.onnx` はdlshogiの公開モデルを取得して配置します。例として、DeepLearningShogiの `dr2_exhi` Releaseから `model-dr2_exhi.zip` を取得し、展開後のファイルを次のようにリネームします。ライセンスは配布元で確認してください。
+
+```text
+model-dr2_exhi.onnx      -> C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\eval\model.onnx
+model-dr2_exhi.onnx.ini  -> C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\eval\model.onnx.ini
+```
+
+確認:
 
 ```powershell
 Test-Path C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\eval\model.onnx
 Test-Path C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\onnxruntime.dll
 Test-Path C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\onnxruntime_providers_shared.dll
-```
-
-`model.onnx` は、dlshogiの公開モデルを取得して配置します。例として、DeepLearningShogiの `dr2_exhi` Releaseから `model-dr2_exhi.zip` を取得し、展開後の `model-dr2_exhi.onnx` を `model.onnx` にリネームします。`.ini` もある場合は同様にリネームして配置します。
-
-```text
-model-dr2_exhi.onnx      -> C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\eval\model.onnx
-model-dr2_exhi.onnx.ini  -> C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\eval\model.onnx.ini
+uv run python -m kiou_eval check-engine
 ```
 
 参考:
@@ -75,17 +72,11 @@ model-dr2_exhi.onnx.ini  -> C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\eval\model.onnx.
 - [DeepLearningShogi dr2_exhi Release](https://github.com/TadaoYamaoka/DeepLearningShogi/releases/tag/dr2_exhi)
 - [dlshogi Windows版ビルド済みファイル公開 - TadaoYamaokaの日記](https://tadaoyamaoka.hatenablog.com/entry/2021/08/17/000710)
 
-まずはCPU版で `check-engine` を通すことを推奨します。CPU版で接続・評価が通れば、Kifuscope本体、USI通信、モデル配置の基本経路が確認できます。その後にTensorRT版へ切り替えると、GPU/DLL/TensorRT初回最適化の問題を分離できます。
+### GPU版: ふかうら王TensorRT
 
-また、Deep ORT CPU版が `Threads` USIオプションを持たない場合があります。その場合は `.env.local` に次を設定すると、Kifuscopeは `setoption name Threads ...` を送信しません。
+CPU版で接続確認できた後に、TensorRT版へ切り替えます。
 
-```dotenv
-YANEAURAOU_THREADS=0
-```
-
-### Windows版ふかうら王TensorRTを使う場合
-
-ふかうら王TensorRT版もUSIエンジンとして起動するため、Kifuscopeから利用できます。`.env.local` の `YANEAURAOU_ENGINE_PATH` をTensorRT版の実行ファイルへ向けてください。
+`.env.local` 例:
 
 ```dotenv
 YANEAURAOU_ENGINE_PATH=C:\Apps\YaneuraOu-Deep-TensorRT_V940\YaneuraOu-Deep-TensorRT.exe
@@ -94,22 +85,17 @@ YANEAURAOU_HASH_MB=1024
 YANEAURAOU_MULTIPV=3
 YANEAURAOU_MOVETIME_MS=300
 YANEAURAOU_COMMAND_TIMEOUT_SEC=180
+YANEAURAOU_EXTRA_OPTIONS=
+SERVER_HOST=127.0.0.1
+SERVER_PORT=8765
 ```
 
-Kifuscopeは起動時にエンジンが宣言するUSIオプションを読み、存在するオプションだけ `setoption` します。これにより、`Threads` 非対応のDeep系エンジンやTensorRT版でも `No such option` で止まりにくくしています。
+TensorRT版はNVIDIA GPU向けです。CUDA/TensorRT/cuDNN DLL、評価モデル、NVIDIAドライバーの組み合わせが合っている必要があります。公式配布物のフォルダ構成を崩さず、エンジン本体、同梱DLL、`eval/` を同じ配布フォルダ内に置く構成を推奨します。初回起動やモデル最適化では `isready` 応答まで時間がかかることがあるため、`YANEAURAOU_COMMAND_TIMEOUT_SEC=180` 以上を使います。
 
-TensorRT版固有のUSIオプションを渡したい場合は、`;` 区切りで指定できます。指定した名前がエンジン側に存在しない場合は送信せずスキップします。
+TensorRT版固有のUSIオプションを渡す場合は `;` 区切りで指定できます。指定した名前がエンジン側に存在しない場合は送信せずスキップします。
 
 ```dotenv
 YANEAURAOU_EXTRA_OPTIONS=SomeOption=Value;AnotherOption=123
-```
-
-ふかうら王TensorRT版はNVIDIA GPU向けです。公式リリースでは、V9.40のTensorRT版はNVIDIA GPUが必要で、配布版にはCUDA/TensorRT/cuDNNランタイムが同梱されています。TensorRT/cuDNNのDLLをグローバルPATHで混在させると別バージョン競合が起きやすいため、公式Wikiのフォルダ構成例どおり、実行ファイルと同じフォルダへ必要DLLと `eval/*.model` を置く構成を推奨します。
-
-TensorRT版は初回起動時やモデル最適化時に `isready` 応答まで時間がかかる場合があります。その場合は `.env.local` でタイムアウトを延ばします。
-
-```dotenv
-YANEAURAOU_COMMAND_TIMEOUT_SEC=180
 ```
 
 参考:
@@ -118,7 +104,18 @@ YANEAURAOU_COMMAND_TIMEOUT_SEC=180
 - [YaneuraOu Releases - GitHub](https://github.com/yaneurao/YaneuraOu/releases)
 - [ふかうら王のビルド手順 - yaneurao/YaneuraOu Wiki](https://github.com/yaneurao/YaneuraOu/wiki/%E3%81%B5%E3%81%8B%E3%81%86%E3%82%89%E7%8E%8B%E3%81%AE%E3%83%93%E3%83%AB%E3%83%89%E6%89%8B%E9%A0%86)
 
-設定の優先順位は、CLI引数、環境変数、`.env.local`、`.env`、既定値です。
+### Linux NNUE版
+
+Linuxでは、エンジンをリポジトリ外へ配置して実行権限を付けます。NNUE版では通常、実行ファイルの親ディレクトリ以下に `eval/nn.bin` が必要です。
+
+```bash
+chmod +x /home/user/Apps/yaneuraou/YaneuraOu
+```
+
+```dotenv
+YANEAURAOU_ENGINE_PATH=/home/user/Apps/yaneuraou/YaneuraOu
+YANEAURAOU_THREADS=4
+```
 
 ## 使い方
 
@@ -153,17 +150,7 @@ uv run python -m kiou_eval demo-overlay
 
 OBSの「ブラウザ」ソースへ `http://127.0.0.1:8765/overlay` を登録し、幅520、高さ220程度を指定します。対局者用画面にはこのソースを配置しないでください。
 
-リアルタイム認識・評価込みで起動する場合:
-
-```bash
-uv run python -m kiou_eval serve-realtime \
-  --calibration samples/calibration.kiou-2064x1112.example.json \
-  --templates templates/kiou-initial \
-  --source window \
-  --window-title KIOU
-```
-
-Windows上では、表示中の `KIOU` ウィンドウを直接キャプチャします。OBSは同じ `KIOU` ウィンドウを「ウィンドウキャプチャ」で取り込み、Kifuscopeの `/overlay` を「ブラウザ」ソースで重ねます。
+リアルタイム認識・評価込みで起動する場合は、後述のWindows用コマンドを使います。Windows上では、表示中の `KIOU` ウィンドウを直接キャプチャします。OBSは同じ `KIOU` ウィンドウを「ウィンドウキャプチャ」で取り込み、Kifuscopeの `/overlay` を「ブラウザ」ソースで重ねます。
 
 重要: `--source window --window-title KIOU` はWindows APIでウィンドウを取得するため、KifuscopeもWindows側で起動する必要があります。WSL Ubuntu上で実行したKifuscopeからは、通常のWindowsアプリである棋桜のウィンドウを直接取得できません。
 
@@ -173,6 +160,14 @@ Windowsでの最小起動手順は次の通りです。
 2. KIOUウィンドウを最小化せず、画面上に表示しておく
 3. Kifuscopeを起動する
 
+PowerShellで複数行に分ける場合、行末はバックスラッシュ `\` ではなくバッククォート `` ` `` です。コピーミスを避けるなら、まず1行版を使ってください。
+
+```powershell
+uv run python -m kiou_eval serve-realtime --calibration samples/calibration.kiou-2064x1112.example.json --templates templates/kiou-initial --source window --window-title KIOU
+```
+
+PowerShellで複数行に分ける場合:
+
 ```powershell
 uv run python -m kiou_eval serve-realtime `
   --calibration samples/calibration.kiou-2064x1112.example.json `
@@ -181,7 +176,7 @@ uv run python -m kiou_eval serve-realtime `
   --window-title KIOU
 ```
 
-PowerShellではなくコマンドプロンプトを使う場合は、1行で実行します。
+コマンドプロンプトの場合:
 
 ```cmd
 uv run python -m kiou_eval serve-realtime --calibration samples/calibration.kiou-2064x1112.example.json --templates templates/kiou-initial --source window --window-title KIOU

@@ -20,52 +20,60 @@ usinewgame
 
 評価時は `position sfen ...` と `go movetime ...` を送り、`bestmove` までの最新 `info` をMultiPV番号ごとに保持する。各応答にはタイムアウトを設ける。終了時は `quit` を送り、応答しなければプロセスを終了する。
 
-## Windows Deep ORT CPU版の配置確認
+## Windows Deep系エンジンの設定
 
-`YaneuraOu-Deep-ORT-CPU` 版は、実行ファイルと同じディレクトリにONNX Runtime DLL群、配下の `eval/` にONNX評価モデルが必要である。
+Deep ORT CPU版とふかうら王TensorRT版は、通常のYaneuraOuと同じくUSIエンジンとして扱う。ただし、Deep系エンジンは `Threads` など一部のUSIオプションを持たない場合がある。Windowsでは `YANEAURAOU_THREADS=0` を基本にし、Kifuscopeから `Threads` を送らない。
+
+Kifuscopeは `usi` 応答中の `option name ...` を収集し、エンジンが宣言したオプションだけ送る。`USI_Hash`、`MultiPV`、追加オプションも未対応ならスキップする。
+
+### 1. まずCPU版で切り分ける
+
+最初にDeep ORT CPU版で `check-engine` と `analyze-sfen` を通す。CPU版で成功すれば、Kifuscope本体、USI通信、ONNXモデル配置の基本経路は正常と判断できる。
+
+`.env.local` 例。
+
+```dotenv
+YANEAURAOU_ENGINE_PATH=C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\YaneuraOu-Deep-ORT-CPU.exe
+YANEAURAOU_THREADS=0
+YANEAURAOU_HASH_MB=1024
+YANEAURAOU_MULTIPV=3
+YANEAURAOU_MOVETIME_MS=500
+YANEAURAOU_COMMAND_TIMEOUT_SEC=60
+YANEAURAOU_EXTRA_OPTIONS=
+```
+
+配置例。
 
 ```text
-C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\YaneuraOu-Deep-ORT-CPU.exe
-C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\onnxruntime.dll
-C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\onnxruntime_providers_shared.dll
-C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\eval\model.onnx
+C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\
+  YaneuraOu-Deep-ORT-CPU.exe
+  onnxruntime.dll
+  onnxruntime_providers_shared.dll
+  eval\
+    model.onnx
+    model.onnx.ini
 ```
 
-次のエラーが出る場合は、評価モデルが不足している。
-
-```text
-Error! : C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\eval/model.onnx file not found
-```
-
-PowerShellで確認する。
-
-```powershell
-Test-Path C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\eval\model.onnx
-```
-
-`model.onnx` はdlshogiの公開モデルを取得して配置する。例として、DeepLearningShogiの `dr2_exhi` Releaseから `model-dr2_exhi.zip` を取得し、展開後の `model-dr2_exhi.onnx` を `model.onnx` にリネームする。`.ini` がある場合も同様にリネームする。
+`model.onnx` はdlshogiの公開モデルを取得して配置する。例として、DeepLearningShogiの `dr2_exhi` Releaseから `model-dr2_exhi.zip` を取得し、展開後のファイルをリネームする。ライセンスは配布元で確認する。
 
 ```text
 model-dr2_exhi.onnx      -> eval\model.onnx
 model-dr2_exhi.onnx.ini  -> eval\model.onnx.ini
 ```
 
-参考:
+確認。
 
-- [DeepLearningShogi dr2_exhi Release](https://github.com/TadaoYamaoka/DeepLearningShogi/releases/tag/dr2_exhi)
-- [dlshogi Windows版ビルド済みファイル公開 - TadaoYamaokaの日記](https://tadaoyamaoka.hatenablog.com/entry/2021/08/17/000710)
-
-`No such option: Threads` が出る場合は `.env.local` に次を設定する。
-
-```dotenv
-YANEAURAOU_THREADS=0
+```powershell
+Test-Path C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\eval\model.onnx
+Test-Path C:\Apps\YaneuraOu-Deep-ORT-CPU_V940\onnxruntime.dll
+uv run python -m kiou_eval check-engine
 ```
 
-## Windows ふかうら王TensorRT版
+### 2. GPU/TensorRT版へ切り替える
 
-ふかうら王TensorRT版もUSIエンジンとして起動する。Kifuscope側は通常のYaneuraOuと同じく、外部プロセスとして起動し、標準入力・標準出力でUSI通信する。
+CPU版で成功した後、ふかうら王TensorRT版へ切り替える。TensorRT版だけ失敗する場合は、Kifuscope本体ではなくGPU、NVIDIAドライバー、CUDA/TensorRT/cuDNN DLL、TensorRTエンジン生成、モデル形式の問題に絞り込める。
 
-`.env.local` の例。
+`.env.local` 例。
 
 ```dotenv
 YANEAURAOU_ENGINE_PATH=C:\Apps\YaneuraOu-Deep-TensorRT_V940\YaneuraOu-Deep-TensorRT.exe
@@ -73,14 +81,11 @@ YANEAURAOU_THREADS=0
 YANEAURAOU_HASH_MB=1024
 YANEAURAOU_MULTIPV=3
 YANEAURAOU_MOVETIME_MS=300
+YANEAURAOU_COMMAND_TIMEOUT_SEC=180
 YANEAURAOU_EXTRA_OPTIONS=
 ```
 
-TensorRT版は初回起動時やモデル最適化時に `isready` 応答まで時間がかかる場合がある。その場合はタイムアウトを延ばす。
-
-```dotenv
-YANEAURAOU_COMMAND_TIMEOUT_SEC=180
-```
+TensorRT版は初回起動時やモデル最適化時に `isready` 応答まで時間がかかる場合があるため、タイムアウトはCPU版より長めにする。公式配布物のフォルダ構成を崩さず、エンジン本体、同梱DLL、`eval/` を同じ配布フォルダ内に置く。
 
 TensorRT版固有のUSIオプションを指定する場合。
 
@@ -88,15 +93,12 @@ TensorRT版固有のUSIオプションを指定する場合。
 YANEAURAOU_EXTRA_OPTIONS=SomeOption=Value;AnotherOption=123
 ```
 
-ふかうら王TensorRT版はNVIDIA GPU向けである。公式ReleaseではTensorRT版にNVIDIA GPUが必要とされ、配布版にはCUDA、TensorRT、cuDNNのランタイムが同梱される。DLLのバージョン競合を避けるため、公式Wikiの説明どおり、エンジン本体、同梱DLL、評価モデルを同じ配布フォルダ構成で置く。Kifuscopeは実行ファイルの親ディレクトリを作業ディレクトリにして起動するため、相対パスで配置されたDLLや `eval/` を読みやすい。
-
-切り分けは、まずDeep ORT CPU版で `check-engine` と `analyze-sfen` を通し、その後TensorRT版へ切り替える順を推奨する。CPU版で成功してTensorRT版だけ失敗する場合、Kifuscope本体ではなくGPU、DLL、TensorRTエンジン生成、モデル形式の問題に絞り込める。
-
 参考:
 
+- [DeepLearningShogi dr2_exhi Release](https://github.com/TadaoYamaoka/DeepLearningShogi/releases/tag/dr2_exhi)
+- [dlshogi Windows版ビルド済みファイル公開 - TadaoYamaokaの日記](https://tadaoyamaoka.hatenablog.com/entry/2021/08/17/000710)
 - [ふかうら王のインストール手順 - yaneurao/YaneuraOu Wiki](https://github.com/yaneurao/YaneuraOu/wiki/%E3%81%B5%E3%81%8B%E3%81%86%E3%82%89%E7%8E%8B%E3%81%AE%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E6%89%8B%E9%A0%86)
 - [YaneuraOu Releases - GitHub](https://github.com/yaneurao/YaneuraOu/releases)
-- [ふかうら王のビルド手順 - yaneurao/YaneuraOu Wiki](https://github.com/yaneurao/YaneuraOu/wiki/%E3%81%B5%E3%81%8B%E3%81%86%E3%82%89%E7%8E%8B%E3%81%AE%E3%83%93%E3%83%AB%E3%83%89%E6%89%8B%E9%A0%86)
 
 ## 評価値
 

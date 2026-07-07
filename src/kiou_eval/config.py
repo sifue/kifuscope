@@ -28,7 +28,7 @@ class Settings(BaseSettings):
 
     engine_path: Path = Field(DEFAULT_ENGINE_PATH, validation_alias="YANEAURAOU_ENGINE_PATH")
     hash_mb: int = Field(1024, ge=1, validation_alias="YANEAURAOU_HASH_MB")
-    threads: int = Field(4, ge=0, validation_alias="YANEAURAOU_THREADS")
+    threads: int = Field(0, ge=0, validation_alias="YANEAURAOU_THREADS")
     multipv: int = Field(3, ge=1, validation_alias="YANEAURAOU_MULTIPV")
     movetime_ms: int = Field(500, ge=1, validation_alias="YANEAURAOU_MOVETIME_MS")
     command_timeout_sec: float = Field(

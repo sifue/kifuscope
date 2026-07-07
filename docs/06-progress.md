@@ -305,3 +305,22 @@ uv run python -m kiou_eval serve-realtime \
 - `README.md`
 - `docs/03-usi-yaneuraou.md`
 - `docs/06-progress.md`
+
+## 2026-07-07 Windows設定ドキュメント整理
+
+### 実装・文書化した内容
+
+- Deep系エンジン向けに `YANEAURAOU_THREADS` の既定値を `0` へ変更
+- READMEのエンジン設定を「CPU版で切り分け」「GPU/TensorRT版」「Linux NNUE版」の3ブロックに整理
+- WindowsではPowerShellの行継続が `\` ではなくバッククォートであることを明記
+- Windows向け `serve-realtime` は1行コマンドを優先して記載
+- OBS文書のWindows起動コマンドもPowerShell用へ修正
+
+### 変更したファイル
+
+- `src/kiou_eval/config.py`
+- `tests/test_config.py`
+- `README.md`
+- `docs/03-usi-yaneuraou.md`
+- `docs/05-obs-overlay.md`
+- `docs/06-progress.md`

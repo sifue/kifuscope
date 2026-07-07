@@ -3,6 +3,21 @@ from pathlib import Path
 from kiou_eval.config import Settings
 
 
+def _clean_env(monkeypatch) -> None:
+    for name in (
+        "YANEAURAOU_ENGINE_PATH",
+        "YANEAURAOU_HASH_MB",
+        "YANEAURAOU_THREADS",
+        "YANEAURAOU_MULTIPV",
+        "YANEAURAOU_MOVETIME_MS",
+        "YANEAURAOU_COMMAND_TIMEOUT_SEC",
+        "YANEAURAOU_EXTRA_OPTIONS",
+        "SERVER_HOST",
+        "SERVER_PORT",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+
 def test_settings_environment_priority(monkeypatch) -> None:
     monkeypatch.setenv("YANEAURAOU_ENGINE_PATH", "/tmp/from-env")
     settings = Settings()
@@ -11,6 +26,13 @@ def test_settings_environment_priority(monkeypatch) -> None:
 
 def test_threads_can_be_disabled() -> None:
     settings = Settings(threads=0)
+    assert settings.threads == 0
+
+
+def test_threads_default_is_disabled_for_deep_engines(monkeypatch, tmp_path: Path) -> None:
+    _clean_env(monkeypatch)
+    monkeypatch.chdir(tmp_path)
+    settings = Settings()
     assert settings.threads == 0
 
 

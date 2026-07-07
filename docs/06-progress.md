@@ -438,3 +438,31 @@ uv run python -m kiou_eval serve-realtime \
 - `src/kiou_eval/runtime/realtime.py`
 - `README.md`
 - `docs/06-progress.md`
+
+## 2026-07-07 KIOU先後表示・手数表示の補助認識
+
+### 実装・文書化した内容
+
+- キャリブレーションに `top_side_label` と `move_number_label` を追加した
+- `x=162, y=306` 周辺の `先手` / `後手` 表示をテンプレート認識し、`top_side` としてJSONへ出すようにした
+- `x=67, y=1070` 周辺の `何手目` 表示から数字部分をテンプレート認識し、`move_number_observed` としてJSONへ出すようにした
+- `build-templates` に `--top-side black|white` と `--move-number <数値>` を追加し、初期テンプレ生成時にUIテキストテンプレートも作れるようにした
+- `build-ui-templates` を追加し、対局途中のスクリーンショットから先後表示・手数数字テンプレートだけを追加できるようにした
+- 合法手追跡の候補スコアに観測手数を弱い補助信号として追加した
+- 手数表示仕様が1手ずれる場合に備え、`move_number_offset` を追加した
+- READMEと画面認識ドキュメントに新しいテンプレート生成手順を追記した
+
+### 変更したファイル
+
+- `src/kiou_eval/__main__.py`
+- `src/kiou_eval/recognizer/calibration.py`
+- `src/kiou_eval/recognizer/board_recognizer.py`
+- `src/kiou_eval/recognizer/template_builder.py`
+- `src/kiou_eval/recognizer/templates.py`
+- `src/kiou_eval/shogi/board_state.py`
+- `src/kiou_eval/shogi/legal_tracker.py`
+- `samples/calibration.kiou-2064x1112.example.json`
+- `tests/test_recognizer.py`
+- `README.md`
+- `docs/04-screen-recognition.md`
+- `docs/06-progress.md`

@@ -168,10 +168,10 @@ GitHubからチェックアウトした直後は `templates/kiou-initial` が存
 uv run python -m kiou_eval capture-window --title KIOU --output captures/kiou-initial.png
 ```
 
-続けて、初期局面SFENから盤面テンプレートを生成します。
+続けて、初期局面SFENから盤面テンプレートを生成します。上側プレイヤー表示が `後手` の場合は `--top-side white`、`先手` の場合は `--top-side black` を指定します。初期画面の手数表示が `1手目` なら `--move-number 1` です。
 
 ```powershell
-uv run python -m kiou_eval build-templates captures/kiou-initial.png --sfen "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1" --calibration samples/calibration.kiou-2064x1112.example.json --output templates/kiou-initial
+uv run python -m kiou_eval build-templates captures/kiou-initial.png --sfen "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1" --calibration samples/calibration.kiou-2064x1112.example.json --output templates/kiou-initial --top-side white --move-number 1
 ```
 
 認識確認:
@@ -180,7 +180,14 @@ uv run python -m kiou_eval build-templates captures/kiou-initial.png --sfen "lns
 uv run python -m kiou_eval recognize-image captures/kiou-initial.png --calibration samples/calibration.kiou-2064x1112.example.json --templates templates/kiou-initial
 ```
 
-`status` が `board_observed` または `ok` なら、リアルタイム起動へ進めます。
+`status` が `board_observed` または `ok` なら、リアルタイム起動へ進めます。出力に `top_side` と `move_number_observed` が出ていれば、先後表示・手数表示の補助認識も動いています。
+
+手数の数字テンプレートは、実際に写っている数字から作ります。初期局面の `1手目` だけでは `1` しか読めないため、`20手目` など別の数字を読ませたい場合は、その手数が表示されたスクリーンショットからUIテンプレートだけを追加してください。盤面SFENは不要です。
+
+```powershell
+uv run python -m kiou_eval capture-window --title KIOU --output captures/kiou-move20.png
+uv run python -m kiou_eval build-ui-templates captures/kiou-move20.png --calibration samples/calibration.kiou-2064x1112.example.json --output templates/kiou-initial --move-number 20
+```
 
 重要: `serve-realtime` は、既定では初期局面SFENから合法手を1手ずつ追跡します。そのため、起動時点のKIOU画面がすでに対局途中まで進んでいると、初期局面にも1手後の合法局面にも一致せず `recognition_failed` になります。CPU対局では、対局開始前または初期局面で一時停止している状態で `serve-realtime` を起動してください。
 
@@ -307,6 +314,8 @@ uv run python -m kiou_eval recognize-image captures/kiou-live.png --calibration 
 
 `recognize-image` の `board_sfen_guess` が初期局面と違う場合、現在のKIOU画面は初期局面ではありません。`serve-realtime` のリセットAPIはKIOU画面自体を戻すものではないため、KIOU側を初期局面に戻すか、`board_sfen_guess` を参考に正確な現在局面SFENを作り、`POST /api/realtime/reset` の `initial_sfen` として指定してください。
 
+`move_number_observed` が出ない、または桁が欠ける場合は、`move_number_label.char_step_x` が実際の文字間隔と合っていないか、その数字のテンプレートが不足しています。`build-ui-templates` で不足している数字が写った画像を追加するか、`samples/calibration.kiou-2064x1112.example.json` の `move_number_label` を調整してください。KIOUの表示仕様が「次に指す手」ではなく「直前に指された手」を示す場合は、`move_number_offset` を `1` または `-1` にして補正します。
+
 KIOUは左右キャラクター、背景、演出で画面全体の色が変化します。Kifuscopeは盤面クロップだけを使うため、盤外のキャラクターや背景は原則として影響しません。一方で、盤面上の光・矢印・選択枠・木目差は認識に影響します。そのため、テンプレート照合ではマス全体ではなく中央領域を主に比較し、グリッド線や端の演出の影響を下げています。根本対策としては、次の順で安定化します。
 
 1. テンプレート生成は、初期局面かつ選択枠・白矢印・黄色枠がない状態で行う
@@ -368,7 +377,9 @@ uv run python -m kiou_eval capture-window --title KIOU --contains --output captu
 uv run python -m kiou_eval build-templates samples/screenshots/initial.png \
   --sfen "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1" \
   --calibration calibration.json \
-  --output templates/kiou
+  --output templates/kiou \
+  --top-side white \
+  --move-number 1
 ```
 
 1枚を認識します。
@@ -398,7 +409,9 @@ uv run python -m kiou_eval track-images frame01.png frame02.png frame03.png \
 uv run python -m kiou_eval build-templates docs/sample-screenshot/sample06.png \
   --sfen "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1" \
   --calibration samples/calibration.kiou-2064x1112.example.json \
-  --output templates/kiou-initial
+  --output templates/kiou-initial \
+  --top-side white \
+  --move-number 1
 ```
 
 ## 開発

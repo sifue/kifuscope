@@ -105,6 +105,10 @@ class LegalMoveMatcher:
             components.append((0.15, matches / len(HAND_ORDER)))
         if observation.turn is not None:
             components.append((0.05, float(candidate.turn == observation.turn)))
+        if observation.move_number_observed is not None:
+            components.append(
+                (0.05, float(candidate.move_number == observation.move_number_observed))
+            )
         if not components:
             return 0.0
         weight_sum = sum(weight for weight, _ in components)

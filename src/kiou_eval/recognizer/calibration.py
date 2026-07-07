@@ -53,16 +53,81 @@ class HandSlot:
 
 
 @dataclass(frozen=True, slots=True)
+class TextLineRegion:
+    """横書きテキストの文字単位認識領域。"""
+
+    first_char_center_x: int
+    first_char_center_y: int
+    char_width: int
+    char_height: int
+    char_step_x: int
+    max_chars: int
+
+    def __post_init__(self) -> None:
+        if (
+            self.first_char_center_x < 0
+            or self.first_char_center_y < 0
+            or self.char_width < 1
+            or self.char_height < 1
+            or self.char_step_x < 1
+            or self.max_chars < 1
+        ):
+            raise ValueError("テキスト認識領域の座標とサイズが不正です")
+
+    def char_rect(self, index: int) -> Rect:
+        """index番目の文字矩形を返す。"""
+        if index < 0 or index >= self.max_chars:
+            raise ValueError("文字indexが範囲外です")
+        center_x = self.first_char_center_x + self.char_step_x * index
+        return Rect(
+            round(center_x - self.char_width / 2),
+            round(self.first_char_center_y - self.char_height / 2),
+            self.char_width,
+            self.char_height,
+        )
+
+    def rect(self, count: int | None = None) -> Rect:
+        """先頭からcount文字分を含む矩形を返す。"""
+        actual_count = self.max_chars if count is None else count
+        if actual_count < 1 or actual_count > self.max_chars:
+            raise ValueError("文字数が範囲外です")
+        first = self.char_rect(0)
+        last = self.char_rect(actual_count - 1)
+        return Rect(
+            first.x,
+            first.y,
+            last.x + last.width - first.x,
+            max(first.height, last.height),
+        )
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> TextLineRegion:
+        return cls(
+            first_char_center_x=int(value["first_char_center_x"]),
+            first_char_center_y=int(value["first_char_center_y"]),
+            char_width=int(value["char_width"]),
+            char_height=int(value["char_height"]),
+            char_step_x=int(value.get("char_step_x", value["char_width"])),
+            max_chars=int(value["max_chars"]),
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class Calibration:
     """1つの画面レイアウトに対応するキャリブレーション。"""
 
     board: Rect
     hand_slots: tuple[HandSlot, ...] = field(default_factory=tuple)
     turn: Rect | None = None
+    top_side_label: TextLineRegion | None = None
+    move_number_label: TextLineRegion | None = None
     rotate_board_180: bool = False
     board_threshold: float = 0.78
     hand_threshold: float = 0.78
     turn_threshold: float = 0.78
+    side_label_threshold: float = 0.78
+    move_number_threshold: float = 0.78
+    move_number_offset: int = 0
     stable_frames: int = 3
     legal_match_threshold: float = 0.90
     legal_margin: float = 0.02
@@ -72,6 +137,8 @@ class Calibration:
             self.board_threshold,
             self.hand_threshold,
             self.turn_threshold,
+            self.side_label_threshold,
+            self.move_number_threshold,
             self.legal_match_threshold,
         ):
             if not 0 <= value <= 1:
@@ -91,14 +158,29 @@ class Calibration:
             for item in payload.get("hand_slots", [])
         )
         turn = Rect.from_dict(payload["turn"]) if payload.get("turn") else None
+        top_side_label = (
+            TextLineRegion.from_dict(payload["top_side_label"])
+            if payload.get("top_side_label")
+            else None
+        )
+        move_number_label = (
+            TextLineRegion.from_dict(payload["move_number_label"])
+            if payload.get("move_number_label")
+            else None
+        )
         return cls(
             board=Rect.from_dict(payload["board"]),
             hand_slots=slots,
             turn=turn,
+            top_side_label=top_side_label,
+            move_number_label=move_number_label,
             rotate_board_180=bool(payload.get("rotate_board_180", False)),
             board_threshold=float(payload.get("board_threshold", 0.78)),
             hand_threshold=float(payload.get("hand_threshold", 0.78)),
             turn_threshold=float(payload.get("turn_threshold", 0.78)),
+            side_label_threshold=float(payload.get("side_label_threshold", 0.78)),
+            move_number_threshold=float(payload.get("move_number_threshold", 0.78)),
+            move_number_offset=int(payload.get("move_number_offset", 0)),
             stable_frames=int(payload.get("stable_frames", 3)),
             legal_match_threshold=float(payload.get("legal_match_threshold", 0.90)),
             legal_margin=float(payload.get("legal_margin", 0.02)),

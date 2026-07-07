@@ -30,6 +30,8 @@ class RecognitionResult:
             "sfen": self.sfen,
             "board_sfen_guess": self.observation.to_board_sfen_guess(),
             "turn": self.observation.turn,
+            "top_side": self.observation.top_side,
+            "move_number_observed": self.observation.move_number_observed,
             "hands": self.observation.hands,
             "squares": squares,
             "square_confidences": list(self.observation.square_confidences),
@@ -48,12 +50,23 @@ class ScreenRecognizer:
         squares, square_confidences = self._recognize_board(board_image)
         hands, hand_confidences = self._recognize_hands(image)
         turn, turn_confidence = self._recognize_turn(image)
+        top_side, side_confidence = self._recognize_top_side(image)
+        observed_move_number, move_confidences = self._recognize_move_number(image)
         confidences = list(square_confidences) + hand_confidences
         if turn_confidence is not None:
             confidences.append(turn_confidence)
+        if side_confidence is not None:
+            confidences.append(side_confidence)
+        confidences.extend(move_confidences)
         confidence = float(np.mean(confidences)) if confidences else 0.0
         observation = BoardObservation(
-            tuple(squares), tuple(square_confidences), hands, turn, confidence
+            tuple(squares),
+            tuple(square_confidences),
+            hands,
+            turn,
+            confidence,
+            top_side=top_side,
+            move_number_observed=observed_move_number,
         )
         state = observation.to_state(move_number)
         if state is None:
@@ -125,3 +138,35 @@ class ScreenRecognizer:
             return None, match.confidence
         turn = {"black": "b", "white": "w"}.get(match.label)
         return turn, match.confidence
+
+    def _recognize_top_side(self, image: np.ndarray) -> tuple[str | None, float | None]:
+        if self.calibration.top_side_label is None or not self.templates.has_group("top_side"):
+            return None, None
+        patch = self.calibration.top_side_label.rect(2).crop(image)
+        match = self.templates.match(patch, "top_side")
+        if match.confidence < self.calibration.side_label_threshold:
+            return None, match.confidence
+        side = {"black": "b", "white": "w"}.get(match.label)
+        return side, match.confidence
+
+    def _recognize_move_number(self, image: np.ndarray) -> tuple[int | None, list[float]]:
+        if (
+            self.calibration.move_number_label is None
+            or not self.templates.has_group("move_digit")
+        ):
+            return None, []
+        digits: list[str] = []
+        confidences: list[float] = []
+        for index in range(self.calibration.move_number_label.max_chars):
+            patch = self.calibration.move_number_label.char_rect(index).crop(image)
+            match = self.templates.match(patch, "move_digit")
+            if match.confidence < self.calibration.move_number_threshold:
+                break
+            if not match.label.isdigit():
+                break
+            digits.append(match.label)
+            confidences.append(match.confidence)
+        if not digits:
+            return None, confidences
+        observed = int("".join(digits)) + self.calibration.move_number_offset
+        return max(1, observed), confidences

@@ -29,6 +29,9 @@ def build_templates(
     state: BoardState,
     calibration: Calibration,
     output: Path,
+    *,
+    top_side: str | None = None,
+    move_number: int | None = None,
 ) -> int:
     """局面ラベルに対応する盤面・持ち駒・手番PNGを切り出す。"""
     state.validate()
@@ -65,4 +68,45 @@ def build_templates(
         patch = calibration.turn.crop(image)
         _write_png(output / "turn" / label / f"turn_{_image_id(patch)}.png", patch)
         written += 1
+    written += build_ui_templates(
+        image,
+        calibration,
+        output,
+        top_side=top_side,
+        move_number=move_number,
+    )
+    return written
+
+
+def build_ui_templates(
+    image: np.ndarray,
+    calibration: Calibration,
+    output: Path,
+    *,
+    top_side: str | None = None,
+    move_number: int | None = None,
+) -> int:
+    """先後表示・手数表示など盤面外UIテンプレートだけを生成する。"""
+    written = 0
+    if calibration.top_side_label is not None and top_side is not None:
+        if top_side not in {"black", "white"}:
+            raise ValueError("top_sideはblackまたはwhiteで指定してください")
+        patch = calibration.top_side_label.rect(2).crop(image)
+        _write_png(
+            output / "top_side" / top_side / f"top_side_{_image_id(patch)}.png",
+            patch,
+        )
+        written += 1
+    if calibration.move_number_label is not None and move_number is not None:
+        if move_number < 1:
+            raise ValueError("move_numberは1以上で指定してください")
+        for index, digit in enumerate(str(move_number)):
+            if index >= calibration.move_number_label.max_chars:
+                raise ValueError("move_numberがmove_number_label.max_charsを超えています")
+            patch = calibration.move_number_label.char_rect(index).crop(image)
+            _write_png(
+                output / "move_digit" / digit / f"digit_{index}_{_image_id(patch)}.png",
+                patch,
+            )
+            written += 1
     return written

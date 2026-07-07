@@ -177,10 +177,16 @@ class BoardObservation:
     hands: dict[str, int] | None
     turn: str | None
     confidence: float
+    top_side: str | None = None
+    move_number_observed: int | None = None
 
     def __post_init__(self) -> None:
         if len(self.squares) != 81 or len(self.square_confidences) != 81:
             raise ValueError("盤面観測は81マスで指定してください")
+        if self.top_side is not None and self.top_side not in {"b", "w"}:
+            raise ValueError("上側表示の先後はbまたはwで指定してください")
+        if self.move_number_observed is not None and self.move_number_observed < 1:
+            raise ValueError("観測手数は1以上で指定してください")
 
     def to_state(self, move_number: int = 1) -> BoardState | None:
         """全要素が確定している場合だけ局面へ変換する。"""

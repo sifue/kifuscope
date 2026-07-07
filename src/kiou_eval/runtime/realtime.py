@@ -131,6 +131,17 @@ class RealtimeEvaluator:
             recognized = self.recognizer.recognize(
                 frame, move_number=self.tracker.current.move_number
             )
+            if recognized.observation.top_side is not None:
+                logger.debug(
+                    "画面上側表示を認識しました: top_side=%s",
+                    recognized.observation.top_side,
+                )
+            if recognized.observation.move_number_observed is not None:
+                logger.debug(
+                    "画面手数を認識しました: observed=%s tracker_current=%s",
+                    recognized.observation.move_number_observed,
+                    self.tracker.current.move_number,
+                )
             tracked = self.tracker.update(recognized.observation)
         if tracked.status == "recognition_failed":
             logger.warning(

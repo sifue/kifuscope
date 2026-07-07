@@ -54,7 +54,7 @@ class TemplateLibrary:
     def __init__(self, root: Path) -> None:
         self.root = root
         self._groups: dict[str, dict[str, list[np.ndarray]]] = {}
-        for group in ("board", "hand", "turn"):
+        for group in ("board", "hand", "turn", "top_side", "move_digit"):
             self._groups[group] = self._load_group(group)
         board_labels = set(self._groups["board"])
         invalid = board_labels - set(LABEL_TO_PIECE)

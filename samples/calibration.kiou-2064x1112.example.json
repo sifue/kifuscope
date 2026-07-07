@@ -7,10 +7,29 @@
   },
   "hand_slots": [],
   "turn": null,
+  "top_side_label": {
+    "first_char_center_x": 162,
+    "first_char_center_y": 306,
+    "char_width": 35,
+    "char_height": 35,
+    "char_step_x": 35,
+    "max_chars": 2
+  },
+  "move_number_label": {
+    "first_char_center_x": 67,
+    "first_char_center_y": 1070,
+    "char_width": 40,
+    "char_height": 40,
+    "char_step_x": 24,
+    "max_chars": 4
+  },
   "rotate_board_180": false,
   "board_threshold": 0.78,
   "hand_threshold": 0.78,
   "turn_threshold": 0.78,
+  "side_label_threshold": 0.78,
+  "move_number_threshold": 0.78,
+  "move_number_offset": 0,
   "stable_frames": 3,
   "legal_match_threshold": 0.85,
   "legal_margin": 0.02

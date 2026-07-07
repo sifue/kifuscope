@@ -18,6 +18,7 @@ from kiou_eval.recognizer import (
     ScreenRecognizer,
     TemplateLibrary,
     build_templates,
+    build_ui_templates,
     capture_window,
     load_image,
 )
@@ -112,6 +113,33 @@ def _parser() -> argparse.ArgumentParser:
     build.add_argument("--sfen", required=True, help="画像に対応するSFEN")
     build.add_argument("--calibration", type=Path, required=True, help="領域設定JSON")
     build.add_argument("--output", type=Path, required=True, help="テンプレート出力先")
+    build.add_argument(
+        "--top-side",
+        choices=["black", "white"],
+        help="画面上側に表示されている側。先手ならblack、後手ならwhite",
+    )
+    build.add_argument(
+        "--move-number",
+        type=int,
+        help="画面左下に表示されている手数。例: 1手目なら1",
+    )
+
+    build_ui = subparsers.add_parser(
+        "build-ui-templates", help="先後表示・手数表示のテンプレートだけを追加する"
+    )
+    build_ui.add_argument("image", type=Path, help="UI文字が写っているスクリーンショット")
+    build_ui.add_argument("--calibration", type=Path, required=True, help="領域設定JSON")
+    build_ui.add_argument("--output", type=Path, required=True, help="テンプレート出力先")
+    build_ui.add_argument(
+        "--top-side",
+        choices=["black", "white"],
+        help="画面上側に表示されている側。先手ならblack、後手ならwhite",
+    )
+    build_ui.add_argument(
+        "--move-number",
+        type=int,
+        help="画面左下に表示されている手数。例: 20手目なら20",
+    )
     return parser
 
 
@@ -229,8 +257,21 @@ def main(argv: list[str] | None = None) -> int:
                 BoardState.from_sfen(args.sfen),
                 calibration,
                 args.output,
+                top_side=args.top_side,
+                move_number=args.move_number,
             )
             print(f"テンプレートを{count}枚生成しました: {args.output}")
+            return 0
+        if args.command == "build-ui-templates":
+            calibration = Calibration.from_file(args.calibration)
+            count = build_ui_templates(
+                load_image(args.image),
+                calibration,
+                args.output,
+                top_side=args.top_side,
+                move_number=args.move_number,
+            )
+            print(f"UIテンプレートを{count}枚生成しました: {args.output}")
             return 0
     except (EngineError, SfenError, ValueError) as exc:
         logging.error("処理に失敗しました: %s", exc)

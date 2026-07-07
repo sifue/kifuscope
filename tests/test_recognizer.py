@@ -11,6 +11,7 @@ from kiou_eval.recognizer import (
     Rect,
     ScreenRecognizer,
     TemplateLibrary,
+    TextLineRegion,
     build_templates,
 )
 from kiou_eval.recognizer.templates import PIECE_TO_LABEL
@@ -32,21 +33,32 @@ def _synthetic_recognizer(tmp_path: Path) -> tuple[ScreenRecognizer, np.ndarray]
     _write_template(tmp_path, "hand", "0", 7)
     _write_template(tmp_path, "turn", "black", 250)
     _write_template(tmp_path, "turn", "white", 100)
+    _write_template(tmp_path, "top_side", "black", 240)
+    _write_template(tmp_path, "top_side", "white", 80)
+    _write_template(tmp_path, "move_digit", "1", 30)
+    _write_template(tmp_path, "move_digit", "2", 60)
 
-    image = np.zeros((100, 110, 3), np.uint8)
+    image = np.zeros((130, 130, 3), np.uint8)
     for index, piece in enumerate(initial.squares):
         row, column = divmod(index, 9)
         value = values[PIECE_TO_LABEL[piece]]
         image[row * 10 : (row + 1) * 10, column * 10 : (column + 1) * 10] = value
     image[0:10, 90:100] = 7
     image[0:10, 100:110] = 250
+    image[100:110, 5:25] = 240
+    image[115:125, 5:15] = 30
+    image[115:125, 15:25] = 60
     calibration = Calibration(
         board=Rect(0, 0, 90, 90),
         hand_slots=(HandSlot("black", "P", Rect(90, 0, 10, 10)),),
         turn=Rect(100, 0, 10, 10),
+        top_side_label=TextLineRegion(10, 105, 10, 10, 10, 2),
+        move_number_label=TextLineRegion(10, 120, 10, 10, 10, 2),
         board_threshold=0.99,
         hand_threshold=0.99,
         turn_threshold=0.99,
+        side_label_threshold=0.99,
+        move_number_threshold=0.99,
     )
     return ScreenRecognizer(calibration, TemplateLibrary(tmp_path)), image
 
@@ -56,6 +68,8 @@ def test_recognize_complete_initial_position(tmp_path: Path) -> None:
     result = recognizer.recognize(image)
     assert result.status == "ok"
     assert result.sfen == INITIAL_SFEN
+    assert result.observation.top_side == "b"
+    assert result.observation.move_number_observed == 12
     assert result.observation.confidence == 1.0
 
 

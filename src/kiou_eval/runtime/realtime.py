@@ -81,12 +81,30 @@ class RealtimeEvaluator:
 
     async def run(self) -> None:
         """キャンセルされるまでリアルタイム認識を続ける。"""
+        logger.info(
+            "リアルタイム認識を開始します: source=%s, templates=%s, calibration=%s",
+            self.config.source,
+            self.config.templates_path,
+            self.config.calibration_path,
+        )
         await self.hub.publish(
             OverlayState(status="recognizing", message="棋桜画面を認識中", confidence=0.0)
         )
         try:
             while True:
-                await self._process_one_frame()
+                try:
+                    await self._process_one_frame()
+                except Exception as exc:
+                    logger.exception("リアルタイム認識ループで例外が発生しました")
+                    await self.hub.publish(
+                        OverlayState(
+                            status="realtime_error",
+                            message=f"リアルタイム認識でエラーが発生しました: {exc}",
+                            confidence=0.0,
+                            sfen=self.tracker.current.to_sfen(),
+                            turn=_turn_label(self.tracker.current.turn),
+                        )
+                    )
                 await asyncio.sleep(self.config.interval_sec)
         except asyncio.CancelledError:
             await self._shutdown_evaluation()
@@ -150,6 +168,7 @@ class RealtimeEvaluator:
 
         if sfen != self._last_requested_sfen:
             self._last_requested_sfen = sfen
+            logger.info("局面を確定しました。評価を要求します: %s", sfen)
             await self._request_evaluation(sfen, tracked.confidence)
 
     def _capture_frame(self) -> np.ndarray:
@@ -186,7 +205,7 @@ class RealtimeEvaluator:
             self._pending_evaluation = None
             try:
                 result = await asyncio.to_thread(engine_analyze, self.engine, sfen)
-            except EngineError as exc:
+            except Exception as exc:
                 logger.error("リアルタイム評価に失敗しました: %s", exc)
                 await self.hub.publish(
                     OverlayState(

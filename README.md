@@ -206,6 +206,24 @@ uv run python -m kiou_eval serve-realtime --calibration samples/calibration.kiou
 
 起動後、ブラウザで `http://127.0.0.1:8765/overlay` を開いて表示確認します。OBSには同じURLを Browser Source として登録します。
 
+画面が「評価待ち」のまま変わらない場合は、別のPowerShellで現在状態を確認します。
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8765/api/eval | ConvertTo-Json -Depth 10
+```
+
+切り分け手順:
+
+```powershell
+# 1. 評価エンジンを使わず、認識ループだけ確認
+uv run python -m kiou_eval serve-realtime --calibration samples/calibration.kiou-2064x1112.example.json --templates templates/kiou-initial --source window --window-title KIOU --no-evaluate
+
+# 2. 別PowerShellで状態確認
+Invoke-RestMethod http://127.0.0.1:8765/api/eval | ConvertTo-Json -Depth 10
+```
+
+`--no-evaluate` で `status: "ok"` になれば、画面認識と合法手追跡は動いています。その場合はエンジン評価側の問題です。`recognition_failed` や `realtime_error` の場合は、表示された `message` に従ってキャプチャ範囲・テンプレート・キャリブレーションを確認します。
+
 最善手はUSI表記に加えて、`▲7六歩` のような配信用日本語表記 `bestmove_japanese` も返します。オーバーレイでは日本語表記を優先表示します。
 
 WSL Ubuntuは、開発、単体テスト、Linux版YaneuraOu検証、画像列入力による認識ループ確認に使います。WSLでリアルタイム確認する場合は `--source images` を使ってください。WSLからWindows画面を取得するにはOBS仮想カメラやNDIなど別経路が必要になり、現時点の推奨構成ではありません。
